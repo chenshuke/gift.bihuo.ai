@@ -1,0 +1,1389 @@
+from flask import Flask, request, jsonify, render_template, redirect, session
+from functools import wraps
+import sqlite3
+import json
+import time
+import hashlib
+import requests
+from datetime import datetime
+import os
+from urllib.parse import quote
+
+app = Flask(__name__)
+
+# 全局CORS处理
+@app.after_request
+def after_request(response):
+    # 为所有API路径添加CORS头
+    if request.path.startswith('/api/'):
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
+
+# 添加静态文件路由
+@app.route('/static/<filename>')
+def static_files(filename):
+    return app.send_static_file(filename)
+
+@app.route('/qr_code.png')
+def qr_code():
+    """返回公众号二维码（占位符）"""
+    # 这里返回一个简单的二维码占位符
+    # 在实际部署时，您需要将真正的二维码图片放在static文件夹中
+    from flask import send_from_directory
+    import os
+    static_dir = os.path.join(app.root_path, 'static')
+    return send_from_directory(static_dir, 'qr_placeholder.png', mimetype='image/png')
+
+# 从环境变量或配置文件读取配置
+DOMAIN = os.environ.get('DOMAIN', 'https://gift.bihuoai.com')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'your-secret-key-change-me')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')
+API_TOKEN = os.environ.get('API_TOKEN', 'bihuoai-api-token-2024')  # API访问令牌
+
+# IP限制配置
+IP_HOURLY_LIMIT = int(os.environ.get('IP_HOURLY_LIMIT', 3))  # 单IP每小时尝试次数
+IP_DAILY_SUCCESS = int(os.environ.get('IP_DAILY_SUCCESS', 5))  # 单IP每天成功领取次数
+
+app.secret_key = SECRET_KEY
+
+# 尝试从.env文件读取配置
+def load_env():
+    try:
+        with open('.env', 'r', encoding='utf-8') as f:
+            for line in f:
+                if '=' in line and not line.startswith('#'):
+                    key, value = line.strip().split('=', 1)
+                    os.environ[key] = value
+                    globals()[key] = value
+    except FileNotFoundError:
+        pass
+
+# 加载配置
+load_env()
+
+def init_database():
+    """初始化数据库"""
+    conn = sqlite3.connect('gift_codes.db')
+    conn.execute("PRAGMA encoding='UTF-8';")  # 设置数据库编码为UTF-8
+    cursor = conn.cursor()
+    
+    # 创建兑换码表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code VARCHAR(32) UNIQUE NOT NULL,
+            is_used BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            claimed_at TIMESTAMP NULL,
+            claimed_by_openid VARCHAR(64) NULL,
+            claimed_by_fingerprint VARCHAR(64) NULL
+        )
+    ''')
+    
+    # 创建用户表（扩展字段）
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid VARCHAR(64),
+            nickname VARCHAR(128),
+            avatar_url VARCHAR(256),
+            phone_number VARCHAR(20),
+            device_fingerprint VARCHAR(64) UNIQUE,
+            email VARCHAR(255) UNIQUE,
+            ip_address VARCHAR(45),
+            fingerprint_data TEXT,
+            user_agent TEXT,
+            last_claim_attempt TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 创建调研表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS surveys (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            openid VARCHAR(64),
+            device_fingerprint VARCHAR(64),
+            phone_number VARCHAR(20),
+            email VARCHAR(255),
+            wechat_id VARCHAR(100),
+            has_used_digital_human VARCHAR(10),
+            problems TEXT,
+            profession VARCHAR(50),
+            custom_profession VARCHAR(100),
+            problem_description TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+
+    # 创建IP限制表
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ip_limits (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip_address VARCHAR(45) NOT NULL,
+            attempt_count INTEGER DEFAULT 1,
+            success_count INTEGER DEFAULT 0,
+            first_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_attempt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # 检查并添加新字段（兼容已存在的数据库）
+    new_user_fields = [
+        ('phone_number', 'VARCHAR(20)'),
+        ('device_fingerprint', 'VARCHAR(64)'),
+        ('email', 'VARCHAR(255)'),
+        ('ip_address', 'VARCHAR(45)'),
+        ('fingerprint_data', 'TEXT'),
+        ('user_agent', 'TEXT'),
+        ('last_claim_attempt', 'TIMESTAMP')
+    ]
+
+    for field_name, field_type in new_user_fields:
+        try:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {field_name} {field_type}')
+        except sqlite3.OperationalError:
+            pass  # 字段已存在
+
+    # 为codes表添加新字段
+    try:
+        cursor.execute('ALTER TABLE codes ADD COLUMN claimed_by_fingerprint VARCHAR(64)')
+    except sqlite3.OperationalError:
+        pass  # 字段已存在
+    
+    # 添加调研表的新字段（数据库迁移）
+    new_survey_fields = [
+        ('wechat_id', 'VARCHAR(100)'),
+        ('has_used_digital_human', 'VARCHAR(10)'),
+        ('problems', 'TEXT'),
+        ('profession', 'VARCHAR(50)'),
+        ('custom_profession', 'VARCHAR(100)'),
+        ('email', 'VARCHAR(255)'),
+        ('device_fingerprint', 'VARCHAR(64)')
+    ]
+
+    for field_name, field_type in new_survey_fields:
+        try:
+            cursor.execute(f'ALTER TABLE surveys ADD COLUMN {field_name} {field_type}')
+        except sqlite3.OperationalError:
+            pass  # 字段已存在
+
+    # 为ip_limits表创建索引（如果不存在）
+    try:
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_ip_address ON ip_limits(ip_address)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_last_attempt ON ip_limits(last_attempt)')
+    except sqlite3.OperationalError:
+        pass  # 索引已存在
+    
+    conn.commit()
+    conn.close()
+
+def get_db_connection():
+    """获取数据库连接"""
+    conn = sqlite3.connect('gift_codes.db')
+    conn.execute("PRAGMA encoding='UTF-8';")  # 设置数据库编码为UTF-8
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def admin_required(f):
+    """管理员权限验证装饰器"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'admin_logged_in' not in session or not session['admin_logged_in']:
+            return redirect('/admin/login')
+        return f(*args, **kwargs)
+    return decorated_function
+
+def api_token_required(f):
+    """API访问令牌验证装饰器 - 任何token都可以访问"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # OPTIONS请求不需要验证
+        if request.method == 'OPTIONS':
+            return f(*args, **kwargs)
+
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'error': '缺少Authorization头'}), 401
+
+        # 任何非空token都允许访问
+        if token.strip() == '':
+            return jsonify({'error': 'Authorization头不能为空'}), 401
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_client_ip():
+    """获取客户端真实IP（支持代理）"""
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0].strip()
+    elif request.headers.get('X-Real-IP'):
+        return request.headers.get('X-Real-IP')
+    return request.remote_addr
+
+def record_ip_attempt(ip_address, success=False):
+    """记录IP尝试"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 查找今天的记录
+    cursor.execute('''
+        SELECT * FROM ip_limits
+        WHERE ip_address = ?
+        AND date(last_attempt) = date('now', 'localtime')
+    ''', (ip_address,))
+
+    record = cursor.fetchone()
+
+    if record:
+        # 更新现有记录
+        new_attempt_count = record['attempt_count'] + 1
+        new_success_count = record['success_count'] + (1 if success else 0)
+
+        cursor.execute('''
+            UPDATE ip_limits
+            SET attempt_count = ?,
+                success_count = ?,
+                last_attempt = datetime('now', 'localtime')
+            WHERE id = ?
+        ''', (new_attempt_count, new_success_count, record['id']))
+    else:
+        # 创建新记录
+        cursor.execute('''
+            INSERT INTO ip_limits (ip_address, attempt_count, success_count)
+            VALUES (?, 1, ?)
+        ''', (ip_address, 1 if success else 0))
+
+    conn.commit()
+    conn.close()
+
+def validate_claim_eligibility(fingerprint, email, ip):
+    """验证领取资格（四层防护）"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # 第1层：设备指纹检查
+    cursor.execute('SELECT * FROM users WHERE device_fingerprint = ?', (fingerprint,))
+    if cursor.fetchone():
+        conn.close()
+        return False, '该设备已领取过兑换码'
+
+    # 第2层：邮箱检查
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
+    if cursor.fetchone():
+        conn.close()
+        return False, '该邮箱已被使用'
+
+    # 第3层：IP每日成功次数限制
+    cursor.execute('''
+        SELECT success_count
+        FROM ip_limits
+        WHERE ip_address = ?
+        AND date(last_attempt) = date('now', 'localtime')
+    ''', (ip,))
+
+    ip_record = cursor.fetchone()
+    if ip_record and ip_record['success_count'] >= IP_DAILY_SUCCESS:
+        conn.close()
+        return False, f'该IP今日领取次数已达上限（{IP_DAILY_SUCCESS}次）'
+
+    # 第4层：IP每小时尝试次数限制
+    cursor.execute('''
+        SELECT COUNT(*) as recent_count
+        FROM ip_limits
+        WHERE ip_address = ?
+        AND datetime(last_attempt) > datetime('now', '-1 hour', 'localtime')
+    ''', (ip,))
+
+    recent = cursor.fetchone()
+    if recent and recent['recent_count'] >= IP_HOURLY_LIMIT:
+        conn.close()
+        return False, '请求过于频繁，请稍后再试'
+
+    conn.close()
+    return True, 'OK'
+
+@app.route('/')
+def index():
+    """主页 - 显示领取页面"""
+    return render_template('index.html')
+
+@app.route('/clear_session')
+def clear_session():
+    """清除session（测试用）"""
+    session.clear()
+    print("DEBUG - Session已清除")
+    return "Session已清除，<a href='/'>返回首页</a>"
+
+@app.route('/debug_miniprogram')
+def debug_miniprogram():
+    """调试小程序配置（测试用）"""
+    return f"""
+    <h2>小程序配置调试</h2>
+    <p><strong>MINIPROGRAM_APPID:</strong> '{MINIPROGRAM_APPID}'</p>
+    <p><strong>MINIPROGRAM_PATH:</strong> '{MINIPROGRAM_PATH}'</p>
+    <p><strong>环境变量 MINIPROGRAM_PATH:</strong> '{os.environ.get('MINIPROGRAM_PATH', 'NOT SET')}'</p>
+    <br>
+    <a href="/">返回首页</a>
+    """
+
+@app.route('/debug_subscription/<openid>')
+def debug_subscription(openid):
+    """关注检查已移除（该调试接口已废弃）"""
+    return f"""
+    <h2>关注检查已移除</h2>
+    <p>该功能已被移除，所有用户现在都可以直接领取兑换码</p>
+    <p><strong>OpenID:</strong> {openid}</p>
+    <br>
+    <a href="/">返回首页</a>
+    """
+
+@app.route('/debug_user')
+def debug_user():
+    """调试用户信息（测试用）"""
+    if 'openid' not in session:
+        return "用户未登录，<a href='/claim'>点击授权</a>"
+    
+    openid = session.get('openid', '')
+    nickname = session.get('nickname', '')
+    avatar_url = session.get('avatar_url', '')
+    
+    # 从数据库查询用户信息
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM users WHERE openid = ?', (openid,))
+    user_data = cursor.fetchone()
+    conn.close()
+    
+    result = f"""
+    <h2>用户调试信息</h2>
+    <h3>Session信息:</h3>
+    <p>OpenID: {openid}</p>
+    <p>昵称: '{nickname}'</p>
+    <p>头像: {avatar_url}</p>
+    
+    <h3>数据库信息:</h3>
+    """
+    
+    if user_data:
+        result += f"""
+        <p>ID: {user_data['id']}</p>
+        <p>OpenID: {user_data['openid']}</p>
+        <p>昵称: '{user_data['nickname']}'</p>
+        <p>头像: {user_data['avatar_url']}</p>
+        <p>创建时间: {user_data['created_at']}</p>
+        """
+    else:
+        result += "<p>数据库中未找到用户记录</p>"
+    
+    result += '<br><a href="/">返回首页</a> | <a href="/clear_session">清除Session</a> | <a href="/force_auth">强制重新授权</a>'
+    
+    return result
+
+@app.route('/force_auth')
+def force_auth():
+    """强制重新授权（测试用）"""
+    # 清除session
+    session.clear()
+    
+    # 调试信息
+    print(f"DEBUG - 强制授权 - WECHAT_APPID: {WECHAT_APPID}")
+    print(f"DEBUG - 强制授权 - DOMAIN: {DOMAIN}")
+    
+    # 构造微信OAuth授权链接，强制显示授权页面
+    redirect_uri = quote(f"{DOMAIN}/callback")
+    import time
+    import random
+    state = f"force_{int(time.time())}_{random.randint(1000, 9999)}"
+    
+    # 添加forcePopup参数尝试强制弹出授权页面
+    auth_url = f"https://open.weixin.qq.com/connect/oauth2/authorize?appid={WECHAT_APPID}&redirect_uri={redirect_uri}&response_type=code&scope=snsapi_userinfo&state={state}&forcePopup=true#wechat_redirect"
+    
+    print(f"DEBUG - 强制授权链接: {auth_url}")
+    print(f"DEBUG - 强制授权 State: {state}")
+    
+    return redirect(auth_url)
+
+@app.route('/auth_test')
+def auth_test():
+    """授权测试页面"""
+    redirect_uri = quote(f"{DOMAIN}/callback")
+    import time
+    import random
+    state = f"test_{int(time.time())}_{random.randint(1000, 9999)}"
+    
+    auth_url = f"https://open.weixin.qq.com/connect/oauth2/authorize?appid={WECHAT_APPID}&redirect_uri={redirect_uri}&response_type=code&scope=snsapi_userinfo&state={state}#wechat_redirect"
+    
+    return f"""
+    <h2>微信授权测试</h2>
+    <p><strong>AppID:</strong> {WECHAT_APPID}</p>
+    <p><strong>Domain:</strong> {DOMAIN}</p>
+    <p><strong>Redirect URI:</strong> {redirect_uri}</p>
+    <p><strong>State:</strong> {state}</p>
+    <hr>
+    <p><strong>授权链接:</strong></p>
+    <textarea style="width:100%; height:100px;">{auth_url}</textarea>
+    <br><br>
+    <a href="{auth_url}" class="btn">点击进行微信授权</a>
+    <br><br>
+    <p><strong>测试说明:</strong></p>
+    <ul>
+        <li>如果您已经授权过，可能不会再次弹出授权页面</li>
+        <li>可以尝试使用不同的微信账号</li>
+        <li>或在微信开发者工具中测试</li>
+        <li>确保AppID和域名配置正确</li>
+    </ul>
+    <br>
+    <a href="/">返回首页</a> | <a href="/clear_session">清除Session</a>
+    """
+
+@app.route('/test_miniprogram')
+def test_miniprogram():
+    """小程序跳转测试页面"""
+    return render_template('test_miniprogram.html')
+
+@app.route('/test_result')
+def test_result():
+    """测试结果页面模拟小程序跳转"""
+    return render_template('result.html', 
+                         success=True, 
+                         code='TEST123456', 
+                         message='测试兑换码 - 用于调试小程序跳转',
+                         miniprogram_appid=MINIPROGRAM_APPID,
+                         miniprogram_path=MINIPROGRAM_PATH)
+
+@app.route('/MP_verify_<filename>.txt')
+def wechat_verify(filename):
+    """处理微信验证文件请求"""
+    # 预定义的验证文件内容
+    verify_files = {
+        '3ZMHvzSoD8dmbVHf': '3ZMHvzSoD8dmbVHf',  # 你的微信验证文件
+    }
+    
+    # 如果文件名在预定义列表中，返回对应内容
+    if filename in verify_files:
+        return verify_files[filename], 200, {'Content-Type': 'text/plain'}
+    
+    # 如果找不到，返回404
+    return "Not Found", 404
+
+@app.route('/claim')
+def claim_page():
+    """领取页面"""
+    # 检查是否已经授权并获取了用户信息
+    if 'openid' in session and 'nickname' in session:
+        nickname = session.get('nickname', '')
+        print(f"DEBUG - 用户已授权，昵称: '{nickname}'，直接进入检查流程")
+        return redirect('/check_and_claim')
+    
+    # 调试信息
+    print(f"DEBUG - WECHAT_APPID: {WECHAT_APPID}")
+    print(f"DEBUG - DOMAIN: {DOMAIN}")
+    
+    # 构造微信OAuth授权链接
+    redirect_uri = quote(f"{DOMAIN}/callback")
+    # 使用 snsapi_userinfo 范围，获取用户信息包括昵称和头像
+    # 添加随机state参数避免缓存
+    import time
+    state = f"claim_{int(time.time())}"
+    auth_url = f"https://open.weixin.qq.com/connect/oauth2/authorize?appid={WECHAT_APPID}&redirect_uri={redirect_uri}&response_type=code&scope=snsapi_userinfo&state={state}#wechat_redirect"
+    
+    print(f"DEBUG - 授权链接: {auth_url}")
+    print(f"DEBUG - Redirect URI: {redirect_uri}")
+    print(f"DEBUG - State: {state}")
+    
+    return redirect(auth_url)
+
+@app.route('/callback')
+def wechat_callback():
+    """微信OAuth回调"""
+    print(f"DEBUG - 回调被访问了！")
+    print(f"DEBUG - 回调参数: {request.args}")
+    print(f"DEBUG - 请求方法: {request.method}")
+    print(f"DEBUG - 请求路径: {request.path}")
+    
+    code = request.args.get('code')
+    if not code:
+        error_msg = request.args.get('error', '未知错误')
+        error_desc = request.args.get('error_description', '')
+        print(f"DEBUG - 授权失败: {error_msg} - {error_desc}")
+        
+        # 显示详细错误信息给用户
+        return f"""
+        <h2>微信授权失败</h2>
+        <p>错误代码: {error_msg}</p>
+        <p>错误描述: {error_desc}</p>
+        <p>回调参数: {dict(request.args)}</p>
+        <p><a href="/">返回首页</a></p>
+        """
+    
+    # 获取access_token
+    token_url = f"https://api.weixin.qq.com/sns/oauth2/access_token?appid={WECHAT_APPID}&secret={WECHAT_SECRET}&code={code}&grant_type=authorization_code"
+    
+    try:
+        response = requests.get(token_url)
+        token_data = response.json()
+        
+        if 'access_token' not in token_data:
+            return jsonify({'error': '获取用户信息失败'}), 400
+        
+        access_token = token_data['access_token']
+        openid = token_data['openid']
+        
+        print(f"DEBUG - OAuth获取到access_token: {access_token[:20]}...")
+        print(f"DEBUG - OAuth获取到openid: {openid}")
+        
+        # 使用snsapi_userinfo获取用户信息
+        user_info_url = f"https://api.weixin.qq.com/sns/userinfo?access_token={access_token}&openid={openid}&lang=zh_CN"
+        print(f"DEBUG - 用户信息URL: {user_info_url}")
+        
+        try:
+            # 设置正确的编码
+            user_response = requests.get(user_info_url)
+            user_response.encoding = 'utf-8'
+            user_info = user_response.json()
+            print(f"DEBUG - OAuth用户信息响应: {user_info}")
+            
+            if 'errcode' in user_info:
+                print(f"ERROR - 获取用户信息失败: {user_info}")
+                nickname = f"用户{openid[-6:]}"
+                avatar_url = ""
+            else:
+                raw_nickname = user_info.get('nickname', '')
+                avatar_url = user_info.get('headimgurl', '')
+                
+                # 处理昵称编码问题
+                if raw_nickname:
+                    try:
+                        # 确保昵称正确编码
+                        if isinstance(raw_nickname, str):
+                            nickname = raw_nickname
+                        else:
+                            nickname = str(raw_nickname)
+                        
+                        # 移除可能导致问题的字符
+                        import re
+                        # 移除控制字符但保留正常的unicode字符（包括emoji）
+                        nickname = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', nickname)
+                        
+                        # 如果昵称太长，截断
+                        if len(nickname) > 50:
+                            nickname = nickname[:50]
+                            
+                    except Exception as e:
+                        print(f"ERROR - 昵称编码处理失败: {str(e)}")
+                        nickname = f"用户{openid[-6:]}"
+                else:
+                    nickname = f"用户{openid[-6:]}"
+                
+                print(f"DEBUG - OAuth获取的原始昵称: '{raw_nickname}'")
+                print(f"DEBUG - OAuth处理后的昵称: '{nickname}'")
+                print(f"DEBUG - OAuth获取的头像: '{avatar_url}'")
+                
+        except Exception as e:
+            print(f"ERROR - 获取用户信息异常: {str(e)}")
+            nickname = f"用户{openid[-6:]}"
+            avatar_url = ""
+        
+        # 保存用户信息到session
+        session['openid'] = openid
+        session['nickname'] = nickname
+        session['avatar_url'] = avatar_url
+        
+        # 保存或更新用户信息到数据库
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute('''
+                INSERT OR REPLACE INTO users (openid, nickname, avatar_url, created_at)
+                VALUES (?, ?, ?, datetime('now', 'localtime'))
+            ''', (openid, nickname, avatar_url))
+            
+            conn.commit()
+            print(f"DEBUG - 数据库保存用户信息成功: openid={openid}, nickname='{nickname}'")
+            
+        except Exception as db_error:
+            print(f"ERROR - 数据库保存失败: {str(db_error)}")
+            print(f"ERROR - 尝试保存的数据: openid={openid}, nickname='{nickname}', avatar_url='{avatar_url}'")
+            
+        finally:
+            conn.close()
+        
+        return redirect('/check_and_claim')
+        
+    except Exception as e:
+        return jsonify({'error': f'授权过程出错: {str(e)}'}), 500
+
+# check_user_subscription函数已移除 - 不再需要检查关注状态
+
+@app.route('/check_and_claim')
+def check_and_claim():
+    """检查并进入调研流程"""
+    if 'openid' not in session:
+        return redirect('/claim')
+    
+    openid = session['openid']
+    
+    # 关注检查已移除，允许所有用户直接领取
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 检查用户是否已经领取过
+    cursor.execute('SELECT code FROM codes WHERE claimed_by_openid = ?', (openid,))
+    existing_code = cursor.fetchone()
+    
+    if existing_code:
+        conn.close()
+        return render_template('result.html', 
+                             success=True, 
+                             code=existing_code['code'], 
+                             message='您已经领取过兑换码了！',
+                             miniprogram_appid=MINIPROGRAM_APPID,
+                             miniprogram_path=MINIPROGRAM_PATH)
+    
+    # 检查用户是否已经完成调研
+    cursor.execute('SELECT * FROM surveys WHERE openid = ?', (openid,))
+    survey_result = cursor.fetchone()
+    
+    conn.close()
+    
+    if survey_result:
+        # 已完成调研，直接分配兑换码
+        return assign_code_to_user(openid)
+    else:
+        # 未完成调研，跳转到调研页面
+        return render_template('survey.html')
+
+def assign_code_to_user(openid):
+    """为用户分配兑换码"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 二次检查：确保用户没有已领取的兑换码（防止并发访问）
+    cursor.execute('SELECT code FROM codes WHERE claimed_by_openid = ?', (openid,))
+    existing_code = cursor.fetchone()
+    
+    if existing_code:
+        conn.close()
+        return render_template('result.html', 
+                             success=True, 
+                             code=existing_code['code'], 
+                             message='您已经领取过兑换码了！',
+                             miniprogram_appid=MINIPROGRAM_APPID,
+                             miniprogram_path=MINIPROGRAM_PATH)
+    
+    # 获取一个未使用的兑换码
+    cursor.execute('SELECT * FROM codes WHERE is_used = FALSE AND claimed_by_openid IS NULL LIMIT 1')
+    available_code = cursor.fetchone()
+    
+    if not available_code:
+        conn.close()
+        return render_template('result.html', 
+                             success=False, 
+                             message='抱歉，兑换码已经全部领完了！',
+                             miniprogram_appid=MINIPROGRAM_APPID,
+                             miniprogram_path=MINIPROGRAM_PATH)
+    
+    # 使用事务确保原子性操作
+    try:
+        # 分配兑换码给用户 - 使用北京时间，同时确保兑换码仍然可用
+        cursor.execute('''
+            UPDATE codes 
+            SET is_used = TRUE, claimed_at = datetime('now', 'localtime'), claimed_by_openid = ?
+            WHERE id = ? AND is_used = FALSE AND claimed_by_openid IS NULL
+        ''', (openid, available_code['id']))
+        
+        # 检查是否成功更新（防止其他请求同时占用了这个兑换码）
+        if cursor.rowcount == 0:
+            conn.close()
+            return render_template('result.html', 
+                                 success=False, 
+                                 message='兑换码已被占用，请重试！',
+                                 miniprogram_appid=MINIPROGRAM_APPID,
+                                 miniprogram_path=MINIPROGRAM_PATH)
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return render_template('result.html', 
+                             success=False, 
+                             message='系统繁忙，请稍后重试！',
+                             miniprogram_appid=MINIPROGRAM_APPID,
+                             miniprogram_path=MINIPROGRAM_PATH)
+    
+    return render_template('result.html', 
+                         success=True, 
+                         code=available_code['code'], 
+                         message='恭喜您！成功领取兑换码！',
+                         miniprogram_appid=MINIPROGRAM_APPID,
+                         miniprogram_path=MINIPROGRAM_PATH)
+
+@app.route('/submit_survey', methods=['POST'])
+def submit_survey():
+    """提交调研数据"""
+    if 'openid' not in session:
+        return redirect('/claim')
+    
+    openid = session['openid']
+    
+    # 获取表单数据
+    phone = request.form.get('phone', '').strip()
+    has_used_digital_human = request.form.get('has_used_digital_human', '').strip()
+    problems = request.form.getlist('problems')  # 多选项
+    profession = request.form.get('profession', '').strip()
+    custom_profession = request.form.get('custom_profession', '').strip()
+    
+    # 数据验证
+    if not all([phone, has_used_digital_human, profession]):
+        return render_template('survey.html', error='请填写完整信息')
+    
+    if not problems:
+        return render_template('survey.html', error='请至少选择一个希望解决的问题')
+    
+    # 手机号格式验证
+    import re
+    if not re.match(r'^1[3-9]\d{9}$', phone):
+        return render_template('survey.html', error='请输入正确的手机号码')
+    
+    # 如果选择其他岗位，必须填写自定义职业
+    if profession == '其它岗位' and not custom_profession:
+        return render_template('survey.html', error='请填写您的具体职业')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 将多选问题转为字符串存储
+        problems_str = ','.join(problems)
+        
+        # 保存调研数据 - 使用北京时间
+        cursor.execute('''
+            INSERT OR REPLACE INTO surveys 
+            (openid, phone_number, has_used_digital_human, problems, profession, custom_profession, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))
+        ''', (openid, phone, has_used_digital_human, problems_str, profession, custom_profession))
+        
+        # 更新用户表的手机号
+        cursor.execute('''
+            UPDATE users SET phone_number = ? WHERE openid = ?
+        ''', (phone, openid))
+        
+        conn.commit()
+        conn.close()
+        
+        # 分配兑换码
+        return assign_code_to_user(openid)
+        
+    except Exception as e:
+        conn.close()
+        print(f"保存调研数据失败: {str(e)}")
+        return render_template('survey.html', error='提交失败，请重试')
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """管理员登录"""
+    if request.method == 'POST':
+        password = request.form.get('password') or request.json.get('password', '')
+        if password == ADMIN_PASSWORD:
+            session['admin_logged_in'] = True
+            return redirect('/admin') if request.form.get('password') else jsonify({'success': True})
+        else:
+            if request.form.get('password'):
+                return render_template('admin_login.html', error='密码错误')
+            else:
+                return jsonify({'success': False, 'message': '密码错误'}), 401
+    
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    """管理员登出"""
+    session.pop('admin_logged_in', None)
+    return redirect('/admin/login')
+
+@app.route('/admin')
+@admin_required
+def admin():
+    """管理后台"""
+    return render_template('admin.html')
+
+@app.route('/admin/stats')
+@admin_required
+def admin_stats():
+    """获取统计信息"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 总兑换码数量
+    cursor.execute('SELECT COUNT(*) as total FROM codes')
+    total_codes = cursor.fetchone()['total']
+    
+    # 已领取数量
+    cursor.execute('SELECT COUNT(*) as used FROM codes WHERE is_used = TRUE')
+    used_codes = cursor.fetchone()['used']
+    
+    # 剩余数量
+    remaining_codes = total_codes - used_codes
+    
+    # 调研人数
+    cursor.execute('SELECT COUNT(*) as survey_count FROM surveys')
+    survey_count = cursor.fetchone()['survey_count']
+    
+    # 最近领取记录
+    cursor.execute('''
+        SELECT c.code, c.claimed_at, 
+               CASE 
+                   WHEN u.nickname IS NOT NULL AND u.nickname != '' THEN u.nickname 
+                   ELSE '用户' || SUBSTR(u.openid, -6)
+               END as nickname,
+               u.openid
+        FROM codes c 
+        LEFT JOIN users u ON c.claimed_by_openid = u.openid 
+        WHERE c.is_used = TRUE 
+        ORDER BY c.claimed_at DESC 
+        LIMIT 10
+    ''')
+    recent_claims = cursor.fetchall()
+    
+    conn.close()
+    
+    return jsonify({
+        'total_codes': total_codes,
+        'used_codes': used_codes,
+        'remaining_codes': remaining_codes,
+        'survey_count': survey_count,
+        'recent_claims': [dict(row) for row in recent_claims]
+    })
+
+@app.route('/admin/import', methods=['POST'])
+@admin_required
+def import_codes():
+    """导入兑换码"""
+    data = request.get_json()
+    codes_text = data.get('codes', '')
+    
+    if not codes_text.strip():
+        return jsonify({'error': '请提供兑换码列表'}), 400
+    
+    # 将文本按行分割，过滤空行
+    codes = [code.strip() for code in codes_text.strip().split('\n') if code.strip()]
+    
+    if not codes:
+        return jsonify({'error': '请提供有效的兑换码'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    success_count = 0
+    error_count = 0
+    
+    for code in codes:
+        try:
+            cursor.execute('INSERT INTO codes (code) VALUES (?)', (code.strip(),))
+            success_count += 1
+        except sqlite3.IntegrityError:
+            error_count += 1  # 重复的兑换码
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'imported_count': success_count,
+        'duplicate_count': error_count,
+        'message': f'成功导入 {success_count} 个兑换码，{error_count} 个重复'
+    })
+
+@app.route('/admin/export')
+@admin_required
+def export_codes():
+    """导出兑换码使用情况"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT c.code, c.is_used, c.claimed_at, u.nickname, u.openid, u.phone_number
+        FROM codes c
+        LEFT JOIN users u ON c.claimed_by_openid = u.openid
+        ORDER BY c.id
+    ''')
+    
+    codes = cursor.fetchall()
+    conn.close()
+    
+    # 转换为字典并确保字符串正确编码
+    result = []
+    for row in codes:
+        row_dict = dict(row)
+        # 确保昵称字段正确编码
+        if row_dict['nickname']:
+            row_dict['nickname'] = str(row_dict['nickname'])
+        result.append(row_dict)
+    
+    response = app.response_class(
+        response=json.dumps(result, ensure_ascii=False, indent=2),
+        status=200,
+        mimetype='application/json; charset=utf-8'
+    )
+    return response
+
+@app.route('/admin/export_surveys')
+@admin_required
+def export_surveys():
+    """导出调研数据"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT s.openid, s.phone_number, s.has_used_digital_human, s.problems, 
+               s.profession, s.custom_profession, s.problem_description, s.created_at,
+               u.nickname, c.code
+        FROM surveys s
+        LEFT JOIN users u ON s.openid = u.openid
+        LEFT JOIN codes c ON s.openid = c.claimed_by_openid
+        ORDER BY s.created_at DESC
+    ''')
+    
+    surveys = cursor.fetchall()
+    conn.close()
+    
+    # 转换为字典并确保字符串正确编码
+    result = []
+    for row in surveys:
+        row_dict = dict(row)
+        # 确保字符串字段正确编码
+        for key in ['nickname', 'problem_description', 'problems', 'profession', 'custom_profession', 'has_used_digital_human']:
+            if row_dict.get(key):
+                row_dict[key] = str(row_dict[key])
+        result.append(row_dict)
+    
+    response = app.response_class(
+        response=json.dumps(result, ensure_ascii=False, indent=2),
+        status=200,
+        mimetype='application/json; charset=utf-8'
+    )
+    return response
+
+@app.route('/admin/export_surveys_csv')
+@admin_required
+def export_surveys_csv():
+    """导出调研数据为CSV格式"""
+    import csv
+    import io
+    from datetime import datetime
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        SELECT s.openid, u.nickname, s.phone_number, s.has_used_digital_human, 
+               s.problems, s.profession, s.custom_profession, s.created_at, c.code
+        FROM surveys s
+        LEFT JOIN users u ON s.openid = u.openid
+        LEFT JOIN codes c ON s.openid = c.claimed_by_openid
+        ORDER BY s.created_at DESC
+    ''')
+    
+    surveys = cursor.fetchall()
+    conn.close()
+    
+    # 创建CSV文件内容
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 写入表头
+    headers = ['OpenID', '用户昵称', '手机号', '是否使用过数字人', '希望解决的问题', 
+               '职业', '自定义职业', '提交时间', '兑换码']
+    writer.writerow(headers)
+    
+    # 写入数据
+    for survey in surveys:
+        row = [
+            survey['openid'] or '',
+            survey['nickname'] or '未知用户',
+            survey['phone_number'] or '',
+            survey['has_used_digital_human'] or '',
+            survey['problems'] or '',
+            survey['profession'] or '',
+            survey['custom_profession'] or '',
+            survey['created_at'] or '',
+            survey['code'] or ''
+        ]
+        writer.writerow(row)
+    
+    # 准备响应
+    output.seek(0)
+    csv_content = output.getvalue()
+    output.close()
+    
+    # 生成文件名
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"survey_data_{timestamp}.csv"
+    
+    response = app.response_class(
+        response=csv_content.encode('utf-8-sig'),  # 使用UTF-8 BOM确保Excel正确显示中文
+        status=200,
+        mimetype='text/csv; charset=utf-8'
+    )
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+@app.route('/admin/delete', methods=['POST'])
+@admin_required
+def delete_codes():
+    """删除兑换码"""
+    data = request.get_json()
+    action = data.get('action', '')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    if action == 'delete_unused':
+        # 删除未使用的兑换码
+        cursor.execute('DELETE FROM codes WHERE is_used = FALSE AND claimed_by_openid IS NULL')
+        deleted_count = cursor.rowcount
+        message = f'已删除 {deleted_count} 个未使用的兑换码'
+        
+    elif action == 'delete_used':
+        # 删除已使用的兑换码
+        cursor.execute('DELETE FROM codes WHERE is_used = TRUE')
+        deleted_count = cursor.rowcount
+        message = f'已删除 {deleted_count} 个已使用的兑换码'
+        
+    elif action == 'delete_all':
+        # 删除所有兑换码
+        cursor.execute('DELETE FROM codes')
+        deleted_count = cursor.rowcount
+        message = f'已删除所有 {deleted_count} 个兑换码'
+        
+    elif action == 'delete_specific':
+        # 删除指定兑换码
+        codes_to_delete = data.get('codes', [])
+        if not codes_to_delete:
+            return jsonify({'success': False, 'message': '请指定要删除的兑换码'}), 400
+        
+        placeholders = ','.join('?' * len(codes_to_delete))
+        cursor.execute(f'DELETE FROM codes WHERE code IN ({placeholders})', codes_to_delete)
+        deleted_count = cursor.rowcount
+        message = f'已删除 {deleted_count} 个指定的兑换码'
+        
+    else:
+        conn.close()
+        return jsonify({'success': False, 'message': '无效的删除操作'}), 400
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({
+        'success': True,
+        'message': message,
+        'deleted_count': deleted_count
+    })
+
+@app.route('/admin/reset_user', methods=['POST'])
+@admin_required
+def reset_user():
+    """重置用户领取状态（允许用户重新领取）"""
+    data = request.get_json()
+    openid = data.get('openid', '')
+    
+    if not openid:
+        return jsonify({'success': False, 'message': '请提供用户OpenID'}), 400
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 将该用户的兑换码重置为未使用状态
+    cursor.execute('''
+        UPDATE codes 
+        SET is_used = FALSE, claimed_at = NULL, claimed_by_openid = NULL 
+        WHERE claimed_by_openid = ?
+    ''', (openid,))
+    
+    reset_count = cursor.rowcount
+    
+    # 同时清除该用户的调研数据，让其重新参与调研
+    cursor.execute('DELETE FROM surveys WHERE openid = ?', (openid,))
+    
+    conn.commit()
+    conn.close()
+    
+    if reset_count > 0:
+        return jsonify({
+            'success': True,
+            'message': f'已重置用户领取状态，释放了 {reset_count} 个兑换码'
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': '未找到该用户的领取记录'
+        })
+
+@app.route('/admin/refresh_user_info', methods=['POST'])
+@admin_required
+def refresh_user_info():
+    """刷新用户信息（获取最新昵称和头像）"""
+    data = request.get_json()
+    openid = data.get('openid', '')
+    
+    if not openid:
+        return jsonify({'success': False, 'message': '请提供用户OpenID'}), 400
+    
+    try:
+        # 获取公众号access_token
+        token_url = f"https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={WECHAT_APPID}&secret={WECHAT_SECRET}"
+        token_response = requests.get(token_url)
+        token_data = token_response.json()
+        
+        if 'access_token' not in token_data:
+            return jsonify({'success': False, 'message': f'获取access_token失败: {token_data}'}), 400
+            
+        access_token = token_data['access_token']
+        
+        # 获取用户信息
+        user_info_url = f"https://api.weixin.qq.com/cgi-bin/user/info?access_token={access_token}&openid={openid}&lang=zh_CN"
+        user_response = requests.get(user_info_url)
+        user_data = user_response.json()
+        
+        if 'errcode' in user_data and user_data['errcode'] != 0:
+            return jsonify({'success': False, 'message': f'获取用户信息失败: {user_data}'}), 400
+        
+        nickname = user_data.get('nickname', '')
+        avatar_url = user_data.get('headimgurl', '')
+        
+        # 更新数据库中的用户信息
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE users 
+            SET nickname = ?, avatar_url = ? 
+            WHERE openid = ?
+        ''', (nickname, avatar_url, openid))
+        
+        updated_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'用户信息已更新',
+            'data': {
+                'nickname': nickname,
+                'avatar_url': avatar_url,
+                'updated_count': updated_count
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'刷新用户信息失败: {str(e)}'
+        }), 500
+
+@app.route('/init_database_now')
+def init_database_now():
+    """临时的数据库初始化接口（仅用于部署时）"""
+    try:
+        init_database()
+        return jsonify({
+            'success': True,
+            'message': '数据库初始化成功！',
+            'tables': ['codes', 'users']
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'数据库初始化失败: {str(e)}'
+        }), 500
+
+# ==================== API接口区域 ====================
+
+@app.route('/api/surveys', methods=['GET', 'OPTIONS'])
+@api_token_required
+def api_get_surveys():
+    # 处理OPTIONS预检请求
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        return response
+    """获取问卷数据API接口"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 获取查询参数
+        start_date = request.args.get('start_date')  # YYYY-MM-DD格式
+        end_date = request.args.get('end_date')  # YYYY-MM-DD格式
+        
+        # 构建基础查询
+        base_query = '''
+            SELECT s.openid, u.nickname, s.phone_number, s.has_used_digital_human, 
+                   s.problems, s.profession, s.custom_profession, s.created_at, c.code,
+                   c.claimed_at, c.is_used
+            FROM surveys s
+            LEFT JOIN users u ON s.openid = u.openid
+            LEFT JOIN codes c ON s.openid = c.claimed_by_openid
+        '''
+        
+        # 添加日期过滤条件
+        conditions = []
+        params = []
+        
+        if start_date:
+            conditions.append("date(s.created_at) >= ?")
+            params.append(start_date)
+        
+        if end_date:
+            conditions.append("date(s.created_at) <= ?")
+            params.append(end_date)
+        
+        if conditions:
+            base_query += " WHERE " + " AND ".join(conditions)
+        
+        base_query += " ORDER BY s.created_at DESC"
+        
+        cursor.execute(base_query, params)
+        surveys = cursor.fetchall()
+        
+        total_count = len(surveys)
+        
+        conn.close()
+        
+        # 转换为字典格式
+        result = []
+        for survey in surveys:
+            survey_dict = {
+                'openid': survey['openid'],
+                'nickname': survey['nickname'],
+                'phone_number': survey['phone_number'],
+                'has_used_digital_human': survey['has_used_digital_human'],
+                'problems': survey['problems'],
+                'profession': survey['profession'],
+                'custom_profession': survey['custom_profession'],
+                'created_at': survey['created_at'],
+                'exchange_code': survey['code'],
+                'exchange_time': survey['claimed_at'],
+                'code_used': bool(survey['is_used']) if survey['is_used'] is not None else None
+            }
+            result.append(survey_dict)
+        
+        response = jsonify({
+            'success': True,
+            'data': result,
+            'total': total_count,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+        # 添加CORS头
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        
+        return response
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }), 500
+
+@app.route('/api/surveys/stats', methods=['GET', 'OPTIONS'])
+@api_token_required
+def api_get_survey_stats():
+    # 处理OPTIONS预检请求
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        return response
+    """获取问卷统计数据API接口"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 基础统计
+        cursor.execute('SELECT COUNT(*) as total FROM surveys')
+        total_surveys = cursor.fetchone()['total']
+        
+        cursor.execute('SELECT COUNT(*) as total FROM codes WHERE is_used = TRUE')
+        codes_used = cursor.fetchone()['total']
+        
+        cursor.execute('SELECT COUNT(*) as total FROM codes')
+        total_codes = cursor.fetchone()['total']
+        
+        # 按日期统计
+        cursor.execute('''
+            SELECT date(created_at) as survey_date, COUNT(*) as count
+            FROM surveys
+            GROUP BY date(created_at)
+            ORDER BY survey_date DESC
+            LIMIT 30
+        ''')
+        daily_stats = cursor.fetchall()
+        
+        # 问题分析
+        cursor.execute('''
+            SELECT problems, COUNT(*) as count
+            FROM surveys
+            WHERE problems IS NOT NULL AND problems != ''
+            GROUP BY problems
+            ORDER BY count DESC
+            LIMIT 10
+        ''')
+        problem_stats = cursor.fetchall()
+        
+        # 职业分析
+        cursor.execute('''
+            SELECT profession, COUNT(*) as count
+            FROM surveys
+            WHERE profession IS NOT NULL AND profession != ''
+            GROUP BY profession
+            ORDER BY count DESC
+        ''')
+        profession_stats = cursor.fetchall()
+        
+        conn.close()
+        
+        response = jsonify({
+            'success': True,
+            'stats': {
+                'total_surveys': total_surveys,
+                'codes_used': codes_used,
+                'total_codes': total_codes,
+                'codes_remaining': total_codes - codes_used,
+                'daily_surveys': [dict(row) for row in daily_stats],
+                'problem_distribution': [dict(row) for row in problem_stats],
+                'profession_distribution': [dict(row) for row in profession_stats]
+            },
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+        # 添加CORS头
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+        
+        return response
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }), 500
+
+if __name__ == '__main__':
+    init_database()
+    # 宝塔Python项目管理器会自动分配端口，这里使用动态端口
+    port = int(os.environ.get('PORT', 1688))
+    app.run(debug=False, host='0.0.0.0', port=port)

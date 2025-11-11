@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if success %}领取成功{% else %}温馨提示{% endif %} - 必火AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#bc1f1a',
+                        primaryDark: '#8b1a16',
+                        primaryHover: '#a01a16'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-gray-50 flex flex-col">
+        {% if success %}
+            <!-- Success Page Header -->
+            <div class="bg-gradient-to-br from-primary to-primaryDark px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <!-- Left: Logo and Brand -->
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl shadow-lg overflow-hidden flex-shrink-0">
+                            <img src="/static/bihuoai_new_logo.png" alt="必火AI Logo" class="w-full h-full object-cover"
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'w-6 h-6 text-white\' fill=\'currentColor\' viewBox=\'0 0 24 24\'><path d=\'M13.5 2c-5.621 0-10.211 4.443-10.5 10h3c.275-3.788 3.46-6.75 7.5-6.75 4.136 0 7.5 3.364 7.5 7.5s-3.364 7.5-7.5 7.5c-1.245 0-2.426-.304-3.463-.841L8 21.414C9.416 22.427 11.16 23 13.5 23c6.065 0 10.5-4.935 10.5-11S19.565 2 13.5 2z\'/></svg>'">
+                        </div>
+                        <div class="font-bold text-sm text-white">必火AI</div>
+                    </div>
+                    <!-- Right: Success Message -->
+                    <div class="text-right">
+                        <h1 class="text-xl font-bold text-white">
+                            恭喜您！
+                        </h1>
+                        <p class="text-white/90 text-sm">
+                            成功领取兑换码
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Content -->
+            <div class="flex-1 px-6 py-4">
+                <!-- Exchange Code -->
+                <div class="bg-white rounded-2xl shadow-sm p-4 mb-4">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3 text-center">
+                        您的兑换码
+                    </h2>
+                    <div class="bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl p-4 text-center">
+                        <div class="text-lg font-mono font-bold text-primary tracking-wide" id="exchangeCode">
+                            {{ code }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <button
+                    onclick="copyCode()"
+                    id="copyBtn"
+                    class="w-full bg-primary text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-3 mb-3 hover:bg-primaryHover"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    复制兑换码
+                </button>
+
+                <a
+                    href="https://bihuo.ai/workspace/other/personal-center"
+                    target="_blank"
+                    class="w-full bg-white border-2 border-primary text-primary py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center gap-3 mb-4 hover:bg-primary/5"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    前往个人中心兑换
+                </a>
+
+                <!-- Instructions -->
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                    <p class="text-blue-800 text-sm font-medium leading-relaxed text-left">
+                        <span class="block font-bold mb-2">💡 兑换指引：</span>
+                        1. 点击上方按钮前往个人中心<br>
+                        2. 打开"兑换中心"<br>
+                        3. 输入您的兑换码即可兑换
+                    </p>
+                </div>
+            </div>
+
+            <script>
+                async function copyCode() {
+                    const exchangeCode = document.getElementById('exchangeCode').textContent;
+                    const copyBtn = document.getElementById('copyBtn');
+
+                    try {
+                        // 使用现代API复制
+                        await navigator.clipboard.writeText(exchangeCode);
+
+                        // 更新按钮状态
+                        const originalHTML = copyBtn.innerHTML;
+                        copyBtn.innerHTML = `
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            已复制
+                        `;
+                        copyBtn.classList.add('bg-green-600');
+
+                        // 2秒后恢复
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalHTML;
+                            copyBtn.classList.remove('bg-green-600');
+                        }, 2000);
+
+                    } catch (err) {
+                        console.error('复制失败，尝试降级方案: ', err);
+
+                        // 降级方案：使用传统方法
+                        const textArea = document.createElement("textarea");
+                        textArea.value = exchangeCode;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.select();
+
+                        try {
+                            document.execCommand('copy');
+                            alert('兑换码已复制到剪贴板！');
+                        } catch (err2) {
+                            alert('复制失败，请手动复制：' + exchangeCode);
+                        }
+
+                        document.body.removeChild(textArea);
+                    }
+                }
+            </script>
+        {% else %}
+            <!-- Error Page -->
+            <div class="bg-white shadow-sm px-6 py-6">
+                <div class="flex items-center justify-center mb-4">
+                    <div class="flex flex-col items-center">
+                        <div class="w-16 h-16 rounded-2xl shadow-lg overflow-hidden">
+                            <img src="/static/bihuoai_new_logo.png" alt="必火AI Logo" class="w-full h-full object-cover" 
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'w-8 h-8 text-white\' fill=\'currentColor\' viewBox=\'0 0 24 24\'><path d=\'M13.5 2c-5.621 0-10.211 4.443-10.5 10h3c.275-3.788 3.46-6.75 7.5-6.75 4.136 0 7.5 3.364 7.5 7.5s-3.364 7.5-7.5 7.5c-1.245 0-2.426-.304-3.463-.841L8 21.414C9.416 22.427 11.16 23 13.5 23c6.065 0 10.5-4.935 10.5-11S19.565 2 13.5 2z\'/></svg>'">
+                        </div>
+                        <div class="mt-2 font-bold text-base text-gray-800">必火AI</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Content -->
+            <div class="flex-1 px-6 py-8">
+                <div class="bg-white rounded-2xl shadow-sm p-8 text-center">
+                    <div class="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg class="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.314 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+                        </svg>
+                    </div>
+                    <h2 class="text-orange-600 text-xl font-bold mb-4">{{ message }}</h2>
+                    
+                    <a href="/" class="inline-block bg-primary text-white py-3 px-8 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 hover:bg-primaryHover">
+                        🏠 返回首页
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

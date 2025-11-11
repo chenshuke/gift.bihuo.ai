@@ -1,0 +1,15 @@
+{
+    "name": "必火AI兑换码系统",
+    "version": "1.0.0",
+    "description": "微信公众号兑换码领取系统",
+    "entry_point": "main.py",
+    "port": 5000,
+    "python_version": "3.8",
+    "requirements": "requirements.txt",
+    "environment": {
+        "WECHAT_APPID": "",
+        "WECHAT_SECRET": "",
+        "DOMAIN": "https://gift.bihuoai.com",
+        "SECRET_KEY": "your-secret-key-change-me"
+    }
+}

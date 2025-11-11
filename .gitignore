@@ -1,0 +1,47 @@
+# Flask
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+*.db
+*.sqlite
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Environment variables
+.env
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules
+node_modules/
+
+# Python
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

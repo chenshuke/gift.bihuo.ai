@@ -1,0 +1,38 @@
+# 部署时需要排除的文件（避免覆盖生产数据）
+
+# 数据库文件 - 包含所有业务数据
+gift_codes.db
+gift_codes.db.*
+
+# 配置文件 - 包含密钥信息
+.env
+.env.backup
+.env.example
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+app_start.log
+
+# 运行时文件
+*.pid
+*.sock
+
+# 备份文件
+backup_*/
+*.backup
+
+# 开发文件
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+.idea/
+
+# 本地测试文件
+test_*.py
+*_test.py

@@ -1,0 +1,18 @@
+[Unit]
+Description=Gift BihuoAI Flask Application
+After=network.target
+
+[Service]
+Type=simple
+User=www
+Group=www
+WorkingDirectory=/www/wwwroot/gift.bihuoai.com
+Environment=PATH=/www/server/python_manager/versions/3.8.12/bin
+ExecStart=/www/server/python_manager/versions/3.8.12/bin/python3 start.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/gift-bihuoai.log
+StandardError=append:/var/log/gift-bihuoai-error.log
+
+[Install]
+WantedBy=multi-user.target

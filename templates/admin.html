@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理后台 - 必火AI兑换码</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#bc1f1a',
+                        primaryDark: '#8b1a16',
+                        primaryHover: '#a01a16'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primaryDark flex items-center justify-center shadow-lg overflow-hidden mr-3">
+                            <img src="/static/bihuoai_new_logo.png" alt="必火AI Logo" class="w-full h-full object-cover" 
+                                 onerror="this.style.display='none'; this.parentElement.innerHTML='<svg class=\'w-4 h-4 text-white\' fill=\'currentColor\' viewBox=\'0 0 24 24\'><path d=\'M13.5 2c-5.621 0-10.211 4.443-10.5 10h3c.275-3.788 3.46-6.75 7.5-6.75 4.136 0 7.5 3.364 7.5 7.5s-3.364 7.5-7.5 7.5c-1.245 0-2.426-.304-3.463-.841L8 21.414C9.416 22.427 11.16 23 13.5 23c6.065 0 10.5-4.935 10.5-11S19.565 2 13.5 2z\'/></svg>'">
+                        </div>
+                        <h1 class="text-xl font-bold text-gray-900">必火AI兑换码管理后台</h1>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <a href="/admin/logout" class="text-gray-700 hover:text-primary px-3 py-2 rounded-md text-sm font-medium">
+                        退出登录
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl">
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">总兑换码</dt>
+                                <dd class="text-3xl font-bold text-gray-900" id="totalCodes">-</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl">
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">已领取</dt>
+                                <dd class="text-3xl font-bold text-green-600" id="usedCodes">-</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl">
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">剩余</dt>
+                                <dd class="text-3xl font-bold text-yellow-600" id="remainingCodes">-</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white overflow-hidden shadow-sm rounded-xl">
+                <div class="p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-5 w-0 flex-1">
+                            <dl>
+                                <dt class="text-sm font-medium text-gray-500 truncate">总用户</dt>
+                                <dd class="text-3xl font-bold text-purple-600" id="totalUsers">-</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="bg-white shadow-sm rounded-xl p-6 mb-8">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">数据管理</h2>
+            <div class="flex flex-wrap gap-4">
+                <button onclick="importCodes()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    导入兑换码
+                </button>
+                <button onclick="exportCodes()" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    导出兑换码数据
+                </button>
+                <button onclick="exportSurveysJSON()" class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    导出调研数据(JSON)
+                </button>
+                <button onclick="exportSurveysCSV()" class="bg-primary hover:bg-primaryHover text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    导出调研数据(CSV)
+                </button>
+                <button onclick="deleteCodes()" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    删除已用兑换码
+                </button>
+                <button onclick="deleteSpecificCodes()" class="bg-orange-600 hover:bg-orange-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    删除指定兑换码
+                </button>
+            </div>
+        </div>
+
+        <!-- Survey Data Table -->
+        <div class="bg-white shadow-sm rounded-xl">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-900">调研数据</h2>
+                    <div class="flex gap-2">
+                        <input type="text" id="searchInput" placeholder="搜索邮箱或问题..."
+                               class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                        <button onclick="searchUsers()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200">
+                            搜索
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">邮箱</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">昵称</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">国家/地区</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">设备指纹</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">使用过数字人</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">希望解决的问题</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">职业</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">兑换码</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">提交时间</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="surveyTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- 数据将通过JavaScript动态加载 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                <p class="text-sm text-gray-700" id="surveyCount">加载中...</p>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div id="importModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">导入兑换码</h3>
+                    <textarea id="codesInput" rows="10" placeholder="每行一个兑换码" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                    <div class="flex justify-end gap-3 mt-4">
+                        <button onclick="closeImportModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors duration-200">
+                            取消
+                        </button>
+                        <button onclick="submitImport()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryHover transition-colors duration-200">
+                            导入
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Specific Codes Modal -->
+        <div id="deleteSpecificModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-xl bg-white">
+                <div class="mt-3">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">删除指定兑换码</h3>
+                    <p class="text-sm text-gray-600 mb-3">请输入要删除的兑换码，每行一个：</p>
+                    <textarea id="deleteCodesInput" rows="10" placeholder="每行一个兑换码" 
+                              class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"></textarea>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
+                        <p class="text-xs text-red-600">⚠️ 警告：此操作不可撤销！请确认要删除的兑换码。</p>
+                    </div>
+                    <div class="flex justify-end gap-3 mt-4">
+                        <button onclick="closeDeleteSpecificModal()" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors duration-200">
+                            取消
+                        </button>
+                        <button onclick="submitDeleteSpecific()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200">
+                            删除
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 页面加载时获取统计数据
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadSurveyData();
+        });
+
+        // 加载统计数据
+        function loadStats() {
+            fetch('/admin/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalCodes').textContent = data.total_codes;
+                    document.getElementById('usedCodes').textContent = data.used_codes;
+                    document.getElementById('remainingCodes').textContent = data.remaining_codes;
+                    document.getElementById('totalUsers').textContent = data.total_users;
+                })
+                .catch(error => console.error('Error loading stats:', error));
+        }
+
+        // 加载调研数据
+        function loadSurveyData() {
+            fetch('/admin/export_surveys')
+                .then(response => response.json())
+                .then(data => {
+                    displaySurveyData(data);
+                })
+                .catch(error => console.error('Error loading survey data:', error));
+        }
+
+        // 显示调研数据
+        function displaySurveyData(surveys) {
+            const tbody = document.getElementById('surveyTableBody');
+            const countElement = document.getElementById('surveyCount');
+            
+            if (surveys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-4 text-center text-gray-500">暂无数据</td></tr>';
+                countElement.textContent = '共 0 条记录';
+                return;
+            }
+
+            tbody.innerHTML = surveys.map(survey => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${survey.email || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${survey.name || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${survey.country || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-xs text-gray-500 font-mono">${survey.device_fingerprint ? survey.device_fingerprint.substring(0, 12) + '...' : '-'}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${survey.has_used_digital_human === '是' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${survey.has_used_digital_human || '-'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                        <div class="truncate" title="${survey.problems || '-'}">
+                            ${survey.problems || '-'}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ${survey.profession || '-'}${survey.custom_profession ? ` (${survey.custom_profession})` : ''}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <code class="text-xs bg-gray-100 px-2 py-1 rounded">${survey.code || '未领取'}</code>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${survey.created_at ? new Date(survey.created_at + '+08:00').toLocaleString('zh-CN', {timeZone: 'Asia/Shanghai'}) : '-'}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="resetUser('${survey.email}', '${survey.device_fingerprint}')" class="text-red-600 hover:text-red-900">重置</button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            countElement.textContent = `共 ${surveys.length} 条记录`;
+        }
+
+        // 导入兑换码
+        function importCodes() {
+            document.getElementById('importModal').classList.remove('hidden');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.add('hidden');
+            document.getElementById('codesInput').value = '';
+        }
+
+        function submitImport() {
+            const codes = document.getElementById('codesInput').value;
+            if (!codes.trim()) {
+                alert('请输入兑换码');
+                return;
+            }
+
+            fetch('/admin/import', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ codes: codes })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`成功导入 ${data.imported_count} 个兑换码`);
+                    closeImportModal();
+                    loadStats();
+                } else {
+                    alert('导入失败: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('导入失败');
+            });
+        }
+
+        // 导出数据
+        function exportCodes() {
+            window.open('/admin/export', '_blank');
+        }
+
+        function exportSurveysJSON() {
+            window.open('/admin/export_surveys', '_blank');
+        }
+
+        function exportSurveysCSV() {
+            window.open('/admin/export_surveys_csv', '_blank');
+        }
+
+        // 删除已使用的兑换码
+        function deleteCodes() {
+            if (confirm('确定要删除所有已使用的兑换码吗？此操作不可撤销！')) {
+                fetch('/admin/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'delete_used' })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`成功删除 ${data.deleted_count} 个已使用的兑换码`);
+                        loadStats();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败');
+                });
+            }
+        }
+
+        // 删除指定兑换码
+        function deleteSpecificCodes() {
+            document.getElementById('deleteSpecificModal').classList.remove('hidden');
+        }
+
+        function closeDeleteSpecificModal() {
+            document.getElementById('deleteSpecificModal').classList.add('hidden');
+            document.getElementById('deleteCodesInput').value = '';
+        }
+
+        function submitDeleteSpecific() {
+            const codesText = document.getElementById('deleteCodesInput').value;
+            if (!codesText.trim()) {
+                alert('请输入要删除的兑换码');
+                return;
+            }
+
+            // 解析兑换码列表
+            const codes = codesText.trim().split('\n')
+                .map(code => code.trim())
+                .filter(code => code.length > 0);
+
+            if (codes.length === 0) {
+                alert('请输入有效的兑换码');
+                return;
+            }
+
+            if (confirm(`确定要删除这 ${codes.length} 个兑换码吗？此操作不可撤销！`)) {
+                fetch('/admin/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        action: 'delete_specific',
+                        codes: codes
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`成功删除 ${data.deleted_count} 个指定的兑换码`);
+                        closeDeleteSpecificModal();
+                        loadStats();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败');
+                });
+            }
+        }
+
+        // 重置用户
+        function resetUser(email, fingerprint) {
+            if (confirm('确定要重置该用户吗？这将清除其兑换记录。')) {
+                fetch('/admin/reset_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        fingerprint: fingerprint
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('用户已重置');
+                        loadStats();
+                        loadSurveyData();
+                    } else {
+                        alert('重置失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('重置失败');
+                });
+            }
+        }
+
+        // 搜索功能
+        function searchUsers() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            if (!searchTerm) {
+                loadSurveyData();
+                return;
+            }
+
+            fetch('/admin/export_surveys')
+                .then(response => response.json())
+                .then(data => {
+                    const filtered = data.filter(survey =>
+                        (survey.email && survey.email.includes(searchTerm)) ||
+                        (survey.problems && survey.problems.includes(searchTerm))
+                    );
+                    displaySurveyData(filtered);
+                })
+                .catch(error => console.error('Error searching:', error));
+        }
+
+        // 回车键搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchUsers();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>问卷调研 - 必火AI</title>
+    <!-- FingerprintJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#bc1f1a',
+                        primaryDark: '#8b1a16',
+                        primaryHover: '#a01a16'
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen bg-gray-50 flex flex-col">
+        <!-- Header with Logo -->
+        <div class="bg-white shadow-sm px-6 py-6">
+            <div class="flex items-center justify-center mb-4">
+                <div class="flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl shadow-lg overflow-hidden">
+                        <img src="/static/bihuoai_new_logo.png" alt="必火AI Logo" class="w-full h-full object-cover" 
+                             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'w-full h-full bg-gradient-to-br from-primary to-primaryDark flex items-center justify-center\'><svg class=\'w-8 h-8 text-white\' fill=\'currentColor\' viewBox=\'0 0 24 24\'><path d=\'M13.5 2c-5.621 0-10.211 4.443-10.5 10h3c.275-3.788 3.46-6.75 7.5-6.75 4.136 0 7.5 3.364 7.5 7.5s-3.364 7.5-7.5 7.5c-1.245 0-2.426-.304-3.463-.841L8 21.414C9.416 22.427 11.16 23 13.5 23c6.065 0 10.5-4.935 10.5-11S19.565 2 13.5 2z\'/></svg></div>'">
+                    </div>
+                    <div class="mt-2 font-bold text-base text-gray-800">必火AI</div>
+                </div>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800 text-center mt-2">问卷调研</h1>
+        </div>
+
+        <!-- Welcome Message -->
+        <div class="px-6 py-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <p class="text-gray-700 text-center leading-relaxed">
+                    感谢对必火AI的关注，为了更好的给您提供服务，麻烦您花30秒填个调查问卷。
+                </p>
+            </div>
+        </div>
+
+        <!-- Survey Content -->
+        <div class="flex-1 px-6 pb-6">
+            <form action="/submit_survey" method="POST" id="surveyForm">
+                <div class="bg-white rounded-2xl shadow-sm p-6 space-y-8">
+                    
+                    {% if error %}
+                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+                            <div class="flex">
+                                <svg class="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="ml-3">
+                                    <h3 class="text-sm font-medium text-red-800">提交失败</h3>
+                                    <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Question 1: 是否使用过数字人 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            1. 您以前是否用过数字人？
+                        </h2>
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="has_used_digital_human" value="是" class="sr-only peer" required>
+                                <div class="p-4 rounded-xl border-2 transition-all font-medium text-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    是
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="has_used_digital_human" value="否" class="sr-only peer" required>
+                                <div class="p-4 rounded-xl border-2 transition-all font-medium text-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    否
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Question 2: 希望解决的问题 -->
+                    <div class="space-y-4">
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800 mb-1">
+                                2. 您希望用必火AI解决什么问题？
+                            </h2>
+                            <p class="text-gray-600 text-sm">可多选</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="打造个人IP" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    打造个人IP
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="短视频获客" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    短视频获客
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="制作课程" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    制作课程
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="短视频带货" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    短视频带货
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="做直播" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    做直播
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="checkbox" name="problems" value="其它" class="sr-only peer">
+                                <div class="p-3 rounded-xl border-2 transition-all text-sm font-medium min-h-[60px] flex flex-col items-center justify-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                    其它
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Question 3: 职业 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            3. 您的职业是？
+                        </h2>
+                        <div class="space-y-3">
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="profession" value="企业老板" class="sr-only peer" required>
+                                <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    企业老板
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="profession" value="创业者" class="sr-only peer" required>
+                                <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    创业者
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="profession" value="销售人员" class="sr-only peer" required>
+                                <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    销售人员
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="profession" value="短视频创作者" class="sr-only peer" required>
+                                <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    短视频创作者
+                                </div>
+                            </label>
+                            <label class="cursor-pointer block">
+                                <input type="radio" name="profession" value="其它岗位" class="sr-only peer" required>
+                                <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
+                                    其它岗位
+                                </div>
+                            </label>
+                        </div>
+                        <input
+                            type="text"
+                            name="custom_profession"
+                            placeholder="请输入您的职业"
+                            class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium hidden"
+                            id="customProfessionInput"
+                        />
+                    </div>
+
+                    <!-- Question 4: 邮箱 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            4. 您的邮箱？
+                        </h2>
+                        <input
+                            type="email"
+                            name="email"
+                            placeholder="请输入您的邮箱"
+                            required
+                            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+                            class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
+                        />
+                        <p class="text-gray-500 text-sm">
+                            用于接收兑换码通知，信息严格保密
+                        </p>
+                    </div>
+
+                    <!-- Question 5: 国家/地区 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            5. 您所在的国家/地区？
+                        </h2>
+                        <input
+                            type="text"
+                            name="country"
+                            placeholder="请输入您所在的国家或地区，如：中国、美国、日本等"
+                            required
+                            maxlength="50"
+                            class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
+                        />
+                        <p class="text-gray-500 text-sm">
+                            帮助我们了解用户分布
+                        </p>
+                    </div>
+
+                    <!-- Question 6: 昵称/称呼 -->
+                    <div class="space-y-4">
+                        <h2 class="text-lg font-bold text-gray-800">
+                            6. 您的昵称或称呼？
+                        </h2>
+                        <input
+                            type="text"
+                            name="name"
+                            placeholder="请输入您的昵称或名字"
+                            required
+                            maxlength="50"
+                            class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
+                        />
+                        <p class="text-gray-500 text-sm">
+                            方便我们后续联系您，可以填写昵称
+                        </p>
+                    </div>
+
+                    <!-- 隐藏字段：设备指纹 -->
+                    <input type="hidden" name="device_fingerprint" id="device_fingerprint" />
+                </div>
+            </form>
+        </div>
+
+        <!-- Bottom Button -->
+        <div class="p-6 bg-white border-t border-gray-100">
+            <button
+                type="submit"
+                form="surveyForm"
+                id="submitBtn"
+                class="w-full bg-primary text-white py-5 rounded-2xl font-bold text-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all hover:bg-primaryHover shadow-lg"
+            >
+                提交并领取兑换码
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 初始化设备指纹
+        (async () => {
+            try {
+                const fp = await FingerprintJS.load();
+                const result = await fp.get();
+                const fingerprint = result.visitorId;
+
+                // 设置隐藏字段
+                document.getElementById('device_fingerprint').value = fingerprint;
+
+                console.log('设备指纹已生成:', fingerprint);
+            } catch (error) {
+                console.error('设备指纹生成失败:', error);
+                // 如果指纹生成失败，使用随机ID（降级方案）
+                const fallbackId = 'fallback_' + Math.random().toString(36).substring(2, 15);
+                document.getElementById('device_fingerprint').value = fallbackId;
+            }
+        })();
+
+        // 表单验证逻辑
+        const form = document.getElementById('surveyForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const customProfessionInput = document.getElementById('customProfessionInput');
+
+        // 监听职业选择变化
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'profession') {
+                if (e.target.value === '其它岗位') {
+                    customProfessionInput.classList.remove('hidden');
+                    customProfessionInput.required = true;
+                } else {
+                    customProfessionInput.classList.add('hidden');
+                    customProfessionInput.required = false;
+                    customProfessionInput.value = '';
+                }
+                checkFormValidity();
+            }
+        });
+
+        // 检查表单有效性
+        function checkFormValidity() {
+            const hasUsedDigitalHuman = form.querySelector('input[name="has_used_digital_human"]:checked');
+            const problems = form.querySelectorAll('input[name="problems"]:checked');
+            const profession = form.querySelector('input[name="profession"]:checked');
+            const customProfession = customProfessionInput.value.trim();
+            const email = form.querySelector('input[name="email"]').value.trim();
+            const fingerprint = document.getElementById('device_fingerprint').value;
+
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+            const isValid = hasUsedDigitalHuman &&
+                           problems.length > 0 &&
+                           profession &&
+                           (profession.value !== '其它岗位' || customProfession !== '') &&
+                           emailRegex.test(email) &&
+                           fingerprint !== '';
+
+            submitBtn.disabled = !isValid;
+        }
+
+        // 监听所有输入变化
+        form.addEventListener('input', checkFormValidity);
+        form.addEventListener('change', checkFormValidity);
+
+        // 表单提交处理
+        form.addEventListener('submit', function(e) {
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '正在提交...';
+        });
+
+        // 初始检查
+        checkFormValidity();
+    </script>
+</body>
+</html>
