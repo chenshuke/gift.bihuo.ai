@@ -129,20 +129,32 @@
 
                     <!-- Question 1: 是否使用过数字人 -->
                     <div class="space-y-4">
-                        <h2 class="text-lg font-bold text-gray-800">
-                            1. 您以前是否用过数字人？
+                        <h2 class="text-lg font-bold text-gray-800" data-t="questions.q1">
+                            {% if lang == 'en' %}
+                                1. Have you used digital humans before?
+                            {% else %}
+                                1. 您以前是否用过数字人？
+                            {% endif %}
                         </h2>
                         <div class="grid grid-cols-2 gap-4">
                             <label class="cursor-pointer">
                                 <input type="radio" name="has_used_digital_human" value="是" class="sr-only peer" required>
                                 <div class="p-4 rounded-xl border-2 transition-all font-medium text-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    是
+                                    {% if lang == 'en' %}
+                                        Yes
+                                    {% else %}
+                                        是
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
                                 <input type="radio" name="has_used_digital_human" value="否" class="sr-only peer" required>
                                 <div class="p-4 rounded-xl border-2 transition-all font-medium text-center border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    否
+                                    {% if lang == 'en' %}
+                                        No
+                                    {% else %}
+                                        否
+                                    {% endif %}
                                 </div>
                             </label>
                         </div>
@@ -151,10 +163,20 @@
                     <!-- Question 2: 希望解决的问题 -->
                     <div class="space-y-4">
                         <div>
-                            <h2 class="text-lg font-bold text-gray-800 mb-1">
-                                2. 您希望用必火AI解决什么问题？
+                            <h2 class="text-lg font-bold text-gray-800 mb-1" data-t="questions.q2">
+                                {% if lang == 'en' %}
+                                    2. What problems do you hope Bihuo AI can solve?
+                                {% else %}
+                                    2. 您希望用必火AI解决什么问题？
+                                {% endif %}
                             </h2>
-                            <p class="text-gray-600 text-sm">可多选</p>
+                            <p class="text-gray-600 text-sm">
+                                {% if lang == 'en' %}
+                                    Multiple selection allowed
+                                {% else %}
+                                    可多选
+                                {% endif %}
+                            </p>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="cursor-pointer">
@@ -163,7 +185,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    打造个人IP
+                                    {% if lang == 'en' %}
+                                        Personal Brand Building
+                                    {% else %}
+                                        打造个人IP
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
@@ -172,7 +198,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    短视频获客
+                                    {% if lang == 'en' %}
+                                        Customer Acquisition
+                                    {% else %}
+                                        短视频获客
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
@@ -216,14 +246,22 @@
 
                     <!-- Question 3: 职业 -->
                     <div class="space-y-4">
-                        <h2 class="text-lg font-bold text-gray-800">
-                            3. 您的职业是？
+                        <h2 class="text-lg font-bold text-gray-800" data-t="questions.q3">
+                            {% if lang == 'en' %}
+                                3. What is your profession?
+                            {% else %}
+                                3. 您的职业是？
+                            {% endif %}
                         </h2>
                         <div class="space-y-3">
                             <label class="cursor-pointer block">
                                 <input type="radio" name="profession" value="企业老板" class="sr-only peer" required>
                                 <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    企业老板
+                                    {% if lang == 'en' %}
+                                        Business Owner
+                                    {% else %}
+                                        企业老板
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer block">
@@ -262,55 +300,79 @@
 
                     <!-- Question 4: 邮箱 -->
                     <div class="space-y-4">
-                        <h2 class="text-lg font-bold text-gray-800">
-                            4. 您的邮箱？
+                        <h2 class="text-lg font-bold text-gray-800" data-t="questions.q4">
+                            {% if lang == 'en' %}
+                                4. What is your email address?
+                            {% else %}
+                                4. 您的邮箱？
+                            {% endif %}
                         </h2>
                         <input
                             type="email"
                             name="email"
-                            placeholder="请输入您的邮箱"
+                            placeholder="{% if lang == 'en' %}Please enter your email address{% else %}请输入您的邮箱{% endif %}"
                             required
                             pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
                         />
                         <p class="text-gray-500 text-sm">
-                            用于接收兑换码通知，信息严格保密
+                            {% if lang == 'en' %}
+                                For redemption code notification, information will be kept confidential
+                            {% else %}
+                                用于接收兑换码通知，信息严格保密
+                            {% endif %}
                         </p>
                     </div>
 
                     <!-- Question 5: 国家/地区 -->
                     <div class="space-y-4">
-                        <h2 class="text-lg font-bold text-gray-800">
-                            5. 您所在的国家/地区？
+                        <h2 class="text-lg font-bold text-gray-800" data-t="questions.q5">
+                            {% if lang == 'en' %}
+                                5. What country/region are you from?
+                            {% else %}
+                                5. 您所在的国家/地区？
+                            {% endif %}
                         </h2>
                         <input
                             type="text"
                             name="country"
-                            placeholder="请输入您所在的国家或地区，如：中国、美国、日本等"
+                            placeholder="{% if lang == 'en' %}Please enter your country or region, e.g., China, USA, Japan, etc.{% else %}请输入您所在的国家或地区，如：中国、美国、日本等{% endif %}"
                             required
                             maxlength="50"
                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
                         />
                         <p class="text-gray-500 text-sm">
-                            帮助我们了解用户分布
+                            {% if lang == 'en' %}
+                                Help us understand user distribution
+                            {% else %}
+                                帮助我们了解用户分布
+                            {% endif %}
                         </p>
                     </div>
 
                     <!-- Question 6: 昵称/称呼 -->
                     <div class="space-y-4">
-                        <h2 class="text-lg font-bold text-gray-800">
-                            6. 您的昵称或称呼？
+                        <h2 class="text-lg font-bold text-gray-800" data-t="questions.q6">
+                            {% if lang == 'en' %}
+                                6. What is your nickname or name?
+                            {% else %}
+                                6. 您的昵称或称呼？
+                            {% endif %}
                         </h2>
                         <input
                             type="text"
                             name="name"
-                            placeholder="请输入您的昵称或名字"
+                            placeholder="{% if lang == 'en' %}Please enter your nickname or name{% else %}请输入您的昵称或名字{% endif %}"
                             required
                             maxlength="50"
                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium"
                         />
                         <p class="text-gray-500 text-sm">
-                            方便我们后续联系您，可以填写昵称
+                            {% if lang == 'en' %}
+                                So we can contact you later, can use nickname
+                            {% else %}
+                                方便我们后续联系您，可以填写昵称
+                            {% endif %}
                         </p>
                     </div>
 
@@ -328,7 +390,11 @@
                 id="submitBtn"
                 class="w-full bg-primary text-white py-5 rounded-2xl font-bold text-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all hover:bg-primaryHover shadow-lg"
             >
-                提交并领取兑换码
+                {% if lang == 'en' %}
+                    Submit and Get Redemption Code
+                {% else %}
+                    提交并领取兑换码
+                {% endif %}
             </button>
         </div>
     </div>
