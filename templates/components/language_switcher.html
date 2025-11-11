@@ -1,0 +1,57 @@
+<!-- Language Switcher Component -->
+<div class="language-switcher fixed top-4 right-4 z-50">
+    <div class="bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+        <div class="flex">
+            <a href="/set_language/zh" class="language-btn px-3 py-2 text-sm font-medium transition-colors duration-200
+               {% if lang == 'zh' %}
+               bg-primary text-white
+               {% else %}
+               text-gray-600 hover:bg-gray-100
+               {% endif %}">
+                中文
+            </a>
+            <a href="/set_language/en" class="language-btn px-3 py-2 text-sm font-medium transition-colors duration-200
+               {% if lang == 'en' %}
+               bg-primary text-white
+               {% else %}
+               text-gray-600 hover:bg-gray-100
+               {% endif %}">
+                English
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.language-switcher .language-btn {
+    text-decoration: none;
+    display: block;
+}
+
+.language-switcher .language-btn:hover {
+    text-decoration: none;
+}
+
+.language-switcher .language-btn:first-child {
+    border-bottom-left-radius: 0.5rem;
+    border-top-left-radius: 0.5rem;
+}
+
+.language-switcher .language-btn:last-child {
+    border-bottom-right-radius: 0.5rem;
+    border-top-right-radius: 0.5rem;
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+    .language-switcher {
+        top: 2;
+        right: 2;
+    }
+
+    .language-switcher .language-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+    }
+}
+</style>

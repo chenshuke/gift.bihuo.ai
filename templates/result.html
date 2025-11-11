@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{% if lang == 'en' %}en{% else %}zh-CN{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if success %}领取成功{% else %}温馨提示{% endif %} - 必火AI</title>
+    <title>{% if success %}{% if lang == 'en' %}Code Successfully Claimed{% else %}领取成功{% endif %}{% else %}{% if lang == 'en' %}Notice{% else %}温馨提示{% endif %}{% endif %} - 必火AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,8 +22,50 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
+    <!-- 加载翻译数据 -->
+    <script>
+        let translations = {};
+        let currentLang = '{{ lang }}';
+
+        // 加载翻译文件
+        fetch('/api/translations/{{ lang }}')
+            .then(response => response.json())
+            .then(data => {
+                translations = data;
+                updatePageText();
+            })
+            .catch(error => console.error('Failed to load translations:', error));
+
+        // 更新页面文本
+        function updatePageText() {
+            if (!translations.result) return;
+
+            const texts = translations.result;
+            // 更新页面元素文本
+            updateElementsByDataAttribute('data-t', texts);
+        }
+
+        // 更新带有data-t属性的元素
+        function updateElementsByDataAttribute(prefix, obj) {
+            document.querySelectorAll(`[data-t^="${prefix}"]`).forEach(element => {
+                const key = element.getAttribute('data-t');
+                const value = getNestedValue(obj, key);
+                if (value) {
+                    element.textContent = value;
+                }
+            });
+        }
+
+        // 获取嵌套对象值
+        function getNestedValue(obj, path) {
+            return path.split('.').reduce((current, key) => current && current[key], obj);
+        }
+    </script>
 </head>
 <body>
+    <!-- 语言切换按钮 -->
+    {% include 'components/language_switcher.html' %}
+
     <div class="min-h-screen bg-gray-50 flex flex-col">
         {% if success %}
             <!-- Success Page Header -->

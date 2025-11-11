@@ -1,0 +1,143 @@
+{
+  "common": {
+    "submit": "提交",
+    "cancel": "取消",
+    "confirm": "确认",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "view": "查看",
+    "search": "搜索",
+    "loading": "加载中...",
+    "success": "成功",
+    "error": "错误",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "index": {
+    "title": "必火AI - 数字人分发平台",
+    "subtitle": "领先的AI数字人解决方案，赋能全球创作者",
+    "description": "简单三步获取兑换码，体验专业级数字人技术",
+    "get_code": "立即领取",
+    "features": {
+      "feature1": "专业数字人技术",
+      "feature2": "简单易用",
+      "feature3": "全球服务"
+    }
+  },
+  "survey": {
+    "title": "必火AI - 用户调研",
+    "subtitle": "完成调研，免费获取数字人兑换码",
+    "questions": {
+      "q1": "您是否使用过数字人产品？",
+      "q2": "您希望数字人解决哪些问题？",
+      "q3": "您的职业是？",
+      "q4": "您的邮箱？",
+      "q5": "您所在的国家/地区？",
+      "q6": "您的昵称或称呼？"
+    },
+    "options": {
+      "yes": "是",
+      "no": "否",
+      "marketing": "营销推广",
+      "content_creation": "内容创作",
+      "customer_service": "客户服务",
+      "education": "教育培训",
+      "entertainment": "娱乐直播",
+      "other": "其他",
+      "developer": "开发者",
+      "designer": "设计师",
+      "product_manager": "产品经理",
+      "marketing_specialist": "营销专员",
+      "entrepreneur": "创业者",
+      "freelancer": "自由职业者",
+      "educator": "教育工作者",
+      "salesperson": "销售人员",
+      "video_creator": "短视频创作者",
+      "other_position": "其他岗位"
+    },
+    "placeholders": {
+      "custom_profession": "请输入您的职业",
+      "email": "请输入您的邮箱",
+      "country": "请输入您所在的国家或地区，如：中国、美国、日本等",
+      "name": "请输入您的昵称或名字"
+    },
+    "hints": {
+      "problems_hint": "请至少选择一个希望解决的问题",
+      "email_hint": "用于接收兑换码通知，信息严格保密",
+      "country_hint": "帮助我们了解用户分布",
+      "name_hint": "方便我们后续联系您，可以填写昵称"
+    },
+    "submit": "提交并领取兑换码",
+    "errors": {
+      "complete_info": "请填写完整信息",
+      "select_problem": "请至少选择一个希望解决的问题",
+      "email_invalid": "请输入正确的邮箱地址",
+      "fill_profession": "请填写您的具体职业"
+    }
+  },
+  "result": {
+    "success_title": "恭喜您！",
+    "success_subtitle": "成功领取兑换码",
+    "your_code": "您的兑换码",
+    "copy_code": "复制兑换码",
+    "copied": "已复制",
+    "goto_redeem": "前往个人中心兑换",
+    "redemption_guide": "兑换指引",
+    "guide_steps": "1. 点击上方按钮前往个人中心<br>2. 打开\"兑换中心\"<br>3. 输入您的兑换码即可兑换",
+    "error_title": "温馨提示",
+    "back_home": "返回首页",
+    "error_messages": {
+      "already_claimed": "您已经领取过兑换码了！",
+      "no_codes": "抱歉，兑换码已经全部领完了！",
+      "occupied": "兑换码已被占用，请重试！",
+      "busy": "系统繁忙，请稍后重试！"
+    }
+  },
+  "admin": {
+    "login": {
+      "title": "管理员登录",
+      "password": "管理员密码",
+      "login_btn": "登录"
+    },
+    "dashboard": {
+      "title": "必火AI管理后台",
+      "overview": "概览统计",
+      "total_codes": "总兑换码",
+      "used_codes": "已使用",
+      "remaining_codes": "剩余",
+      "total_users": "总用户数",
+      "survey_data": "调研数据"
+    },
+    "table": {
+      "headers": {
+        "email": "邮箱",
+        "name": "昵称",
+        "country": "国家/地区",
+        "fingerprint": "设备指纹",
+        "used_digital_human": "使用过数字人",
+        "problems": "希望解决的问题",
+        "profession": "职业",
+        "code": "兑换码",
+        "submit_time": "提交时间",
+        "actions": "操作"
+      },
+      "no_data": "暂无数据",
+      "record_count": "共 {count} 条记录"
+    },
+    "actions": {
+      "reset": "重置",
+      "import_codes": "导入兑换码",
+      "export_json": "导出JSON",
+      "export_csv": "导出CSV",
+      "delete_codes": "删除兑换码"
+    }
+  },
+  "language": {
+    "switch": "切换语言",
+    "auto_detect": "自动检测"
+  }
+}

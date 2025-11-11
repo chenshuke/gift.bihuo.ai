@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{% if lang == 'en' %}en{% else %}zh-CN{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>问卷调研 - 必火AI</title>
+    <title>{% if lang == 'en' %}Survey - Bihuo AI{% else %}问卷调研 - 必火AI{% endif %}</title>
     <!-- FingerprintJS -->
     <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -24,8 +24,60 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
+    <!-- 加载翻译数据 -->
+    <script>
+        let translations = {};
+        let currentLang = '{{ lang }}';
+
+        // 加载翻译文件
+        fetch('/api/translations/{{ lang }}')
+            .then(response => response.json())
+            .then(data => {
+                translations = data;
+                updatePageText();
+            })
+            .catch(error => console.error('Failed to load translations:', error));
+
+        // 更新页面文本
+        function updatePageText() {
+            if (!translations.survey) return;
+
+            const texts = translations.survey;
+            // 更新标题
+            document.title = texts.title;
+
+            // 更新页面元素文本
+            updateElementsByDataAttribute('data-t', texts);
+        }
+
+        // 更新带有data-t属性的元素
+        function updateElementsByDataAttribute(prefix, obj) {
+            document.querySelectorAll(`[data-t^="${prefix}"]`).forEach(element => {
+                const key = element.getAttribute('data-t');
+                const value = getNestedValue(obj, key);
+                if (value) {
+                    if (element.tagName === 'INPUT' && element.type === 'text' ||
+                        element.tagName === 'INPUT' && element.type === 'email' ||
+                        element.tagName === 'TEXTAREA' ||
+                        element.tagName === 'SELECT') {
+                        element.placeholder = value;
+                    } else {
+                        element.textContent = value;
+                    }
+                }
+            });
+        }
+
+        // 获取嵌套对象值
+        function getNestedValue(obj, path) {
+            return path.split('.').reduce((current, key) => current && current[key], obj);
+        }
+    </script>
 </head>
 <body>
+    <!-- 语言切换按钮 -->
+    {% include 'components/language_switcher.html' %}
+
     <div class="min-h-screen bg-gray-50 flex flex-col">
         <!-- Header with Logo -->
         <div class="bg-white shadow-sm px-6 py-6">
@@ -38,7 +90,13 @@
                     <div class="mt-2 font-bold text-base text-gray-800">必火AI</div>
                 </div>
             </div>
-            <h1 class="text-xl font-bold text-gray-800 text-center mt-2">问卷调研</h1>
+            <h1 class="text-xl font-bold text-gray-800 text-center mt-2" data-t="title">
+                {% if lang == 'en' %}
+                    User Survey
+                {% else %}
+                    问卷调研
+                {% endif %}
+            </h1>
         </div>
 
         <!-- Welcome Message -->

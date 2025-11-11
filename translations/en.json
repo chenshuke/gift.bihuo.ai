@@ -1,0 +1,143 @@
+{
+  "common": {
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "search": "Search",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "index": {
+    "title": "Bihuo AI - Digital Human Distribution Platform",
+    "subtitle": "Leading AI digital human solutions for global creators",
+    "description": "Get your code in 3 simple steps and experience professional digital human technology",
+    "get_code": "Get Code Now",
+    "features": {
+      "feature1": "Professional Digital Human Tech",
+      "feature2": "Easy to Use",
+      "feature3": "Global Service"
+    }
+  },
+  "survey": {
+    "title": "Bihuo AI - User Survey",
+    "subtitle": "Complete the survey and get a free digital human redemption code",
+    "questions": {
+      "q1": "Have you used digital human products before?",
+      "q2": "What problems do you hope digital humans can solve?",
+      "q3": "What is your profession?",
+      "q4": "What is your email address?",
+      "q5": "What country/region are you from?",
+      "q6": "What is your nickname or name?"
+    },
+    "options": {
+      "yes": "Yes",
+      "no": "No",
+      "marketing": "Marketing & Promotion",
+      "content_creation": "Content Creation",
+      "customer_service": "Customer Service",
+      "education": "Education & Training",
+      "entertainment": "Entertainment & Live Streaming",
+      "other": "Other",
+      "developer": "Developer",
+      "designer": "Designer",
+      "product_manager": "Product Manager",
+      "marketing_specialist": "Marketing Specialist",
+      "entrepreneur": "Entrepreneur",
+      "freelancer": "Freelancer",
+      "educator": "Educator",
+      "salesperson": "Salesperson",
+      "video_creator": "Video Creator",
+      "other_position": "Other Position"
+    },
+    "placeholders": {
+      "custom_profession": "Please enter your profession",
+      "email": "Please enter your email address",
+      "country": "Please enter your country or region, e.g., China, USA, Japan, etc.",
+      "name": "Please enter your nickname or name"
+    },
+    "hints": {
+      "problems_hint": "Please select at least one problem you want to solve",
+      "email_hint": "For redemption code notification, information will be kept confidential",
+      "country_hint": "Help us understand user distribution",
+      "name_hint": "So we can contact you later, can use nickname"
+    },
+    "submit": "Submit and Get Redemption Code",
+    "errors": {
+      "complete_info": "Please complete all required information",
+      "select_problem": "Please select at least one problem you want to solve",
+      "email_invalid": "Please enter a valid email address",
+      "fill_profession": "Please specify your profession"
+    }
+  },
+  "result": {
+    "success_title": "Congratulations!",
+    "success_subtitle": "Successfully redeemed your code",
+    "your_code": "Your Redemption Code",
+    "copy_code": "Copy Code",
+    "copied": "Copied",
+    "goto_redeem": "Go to Personal Center",
+    "redemption_guide": "Redemption Guide",
+    "guide_steps": "1. Click the button above to go to Personal Center<br>2. Open \"Redemption Center\"<br>3. Enter your redemption code",
+    "error_title": "Notice",
+    "back_home": "Back to Home",
+    "error_messages": {
+      "already_claimed": "You have already claimed a redemption code!",
+      "no_codes": "Sorry, all redemption codes have been claimed!",
+      "occupied": "Code has been claimed, please try again!",
+      "busy": "System is busy, please try again later!"
+    }
+  },
+  "admin": {
+    "login": {
+      "title": "Admin Login",
+      "password": "Admin Password",
+      "login_btn": "Login"
+    },
+    "dashboard": {
+      "title": "Bihuo AI Admin Dashboard",
+      "overview": "Overview",
+      "total_codes": "Total Codes",
+      "used_codes": "Used",
+      "remaining_codes": "Remaining",
+      "total_users": "Total Users",
+      "survey_data": "Survey Data"
+    },
+    "table": {
+      "headers": {
+        "email": "Email",
+        "name": "Name",
+        "country": "Country/Region",
+        "fingerprint": "Device Fingerprint",
+        "used_digital_human": "Used Digital Human",
+        "problems": "Problems to Solve",
+        "profession": "Profession",
+        "code": "Code",
+        "submit_time": "Submit Time",
+        "actions": "Actions"
+      },
+      "no_data": "No Data",
+      "record_count": "{count} records total"
+    },
+    "actions": {
+      "reset": "Reset",
+      "import_codes": "Import Codes",
+      "export_json": "Export JSON",
+      "export_csv": "Export CSV",
+      "delete_codes": "Delete Codes"
+    }
+  },
+  "language": {
+    "switch": "Switch Language",
+    "auto_detect": "Auto Detect"
+  }
+}

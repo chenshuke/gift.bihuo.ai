@@ -9,6 +9,9 @@ from datetime import datetime
 import os
 from urllib.parse import quote
 
+# 导入语言支持
+from language import lang, LANGUAGES
+
 app = Flask(__name__)
 
 # 全局CORS处理
@@ -38,6 +41,28 @@ IP_HOURLY_LIMIT = int(os.environ.get('IP_HOURLY_LIMIT', 3))  # 单IP每小时尝
 IP_DAILY_SUCCESS = int(os.environ.get('IP_DAILY_SUCCESS', 5))  # 单IP每天成功领取次数
 
 app.secret_key = SECRET_KEY
+
+# 语言检测和切换
+def get_current_language():
+    """获取当前语言"""
+    # 优先使用session中的语言设置
+    if 'language' in session:
+        return session['language']
+
+    # 根据IP地址自动检测语言
+    ip_address = get_client_ip()
+    detected_lang = lang.detect_language_from_ip(ip_address)
+
+    # 将检测结果保存到session
+    session['language'] = detected_lang
+    return detected_lang
+
+def set_language(language):
+    """设置语言"""
+    if language in ['zh', 'en']:
+        session['language'] = language
+        return True
+    return False
 
 # 尝试从.env文件读取配置
 def load_env():
@@ -266,16 +291,20 @@ def validate_claim_eligibility(fingerprint, email, ip):
 @app.route('/')
 def index():
     """主页"""
-    return render_template('index.html')
+    current_lang = get_current_language()
+    return render_template('index.html', lang=current_lang)
 
 @app.route('/check_and_claim')
 def check_and_claim():
     """调研问卷页面"""
-    return render_template('survey.html')
+    current_lang = get_current_language()
+    return render_template('survey.html', lang=current_lang)
 
 @app.route('/result')
 def result():
     """领取结果页面（独立路由，支持刷新）"""
+    current_lang = get_current_language()
+
     # 从session中获取结果数据
     success = session.get('result_success', False)
     code = session.get('result_code', '')
@@ -285,7 +314,34 @@ def result():
     if not success and not code and not message:
         return redirect('/')
 
-    return render_template('result.html', success=success, code=code, message=message)
+    return render_template('result.html', success=success, code=code, message=message, lang=current_lang)
+
+@app.route('/set_language/<language>')
+def set_language_route(language):
+    """设置语言"""
+    if set_language(language):
+        # 获取来源页面，避免循环重定向
+        referrer = request.referrer
+        if referrer and request.host in referrer:
+            return redirect(referrer)
+        return redirect('/')
+    else:
+        return redirect('/')
+
+@app.route('/api/translations/<language>')
+def get_translations(language):
+    """获取翻译数据API"""
+    if language not in ['zh', 'en']:
+        return jsonify({'error': 'Language not supported'}), 400
+
+    # 读取翻译文件
+    translations_file = f'translations/{language}.json'
+    if os.path.exists(translations_file):
+        with open(translations_file, 'r', encoding='utf-8') as f:
+            translations = json.load(f)
+        return jsonify(translations)
+    else:
+        return jsonify({'error': 'Translation file not found'}), 404
 
 def assign_code_to_user(fingerprint):
     """为用户分配兑换码（返回结果数据）"""
@@ -368,21 +424,40 @@ def submit_survey():
     profession = request.form.get('profession', '').strip()
     custom_profession = request.form.get('custom_profession', '').strip()
 
+    # 获取当前语言
+    current_lang = get_current_language()
+
+    # 错误信息字典
+    error_messages = {
+        'zh': {
+            'complete_info': '请填写完整信息',
+            'select_problem': '请至少选择一个希望解决的问题',
+            'email_invalid': '请输入正确的邮箱地址',
+            'fill_profession': '请填写您的具体职业'
+        },
+        'en': {
+            'complete_info': 'Please complete all required information',
+            'select_problem': 'Please select at least one problem you want to solve',
+            'email_invalid': 'Please enter a valid email address',
+            'fill_profession': 'Please specify your profession'
+        }
+    }
+
     # 基础数据验证
     if not all([fingerprint, email, name, country, has_used_digital_human, profession]):
-        return render_template('survey.html', error='请填写完整信息')
+        return render_template('survey.html', error=error_messages[current_lang]['complete_info'], lang=current_lang)
 
     if not problems:
-        return render_template('survey.html', error='请至少选择一个希望解决的问题')
+        return render_template('survey.html', error=error_messages[current_lang]['select_problem'], lang=current_lang)
 
     # 邮箱格式验证
     import re
     if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-        return render_template('survey.html', error='请输入正确的邮箱地址')
+        return render_template('survey.html', error=error_messages[current_lang]['email_invalid'], lang=current_lang)
 
     # 如果选择其他岗位，必须填写自定义职业
     if profession == '其它岗位' and not custom_profession:
-        return render_template('survey.html', error='请填写您的具体职业')
+        return render_template('survey.html', error=error_messages[current_lang]['fill_profession'], lang=current_lang)
 
     # 四层验证
     record_ip_attempt(ip_address, success=False)  # 记录尝试
