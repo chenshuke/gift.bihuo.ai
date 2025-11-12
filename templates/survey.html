@@ -103,7 +103,11 @@
         <div class="px-6 py-6">
             <div class="bg-white rounded-2xl shadow-sm p-6">
                 <p class="text-gray-700 text-center leading-relaxed">
-                    感谢对必火AI的关注，为了更好的给您提供服务，麻烦您花30秒填个调查问卷。
+                    {% if lang == 'en' %}
+                        Thank you for your interest in Bihuo AI. Please take 30 seconds to fill out this survey so we can better serve you.
+                    {% else %}
+                        感谢对必火AI的关注，为了更好的给您提供服务，麻烦您花30秒填个调查问卷。
+                    {% endif %}
                 </p>
             </div>
         </div>
@@ -120,8 +124,14 @@
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                                 </svg>
                                 <div class="ml-3">
-                                    <h3 class="text-sm font-medium text-red-800">提交失败</h3>
-                                    <p class="mt-1 text-sm text-red-700">{{ error }}</p>
+                                    <h3 class="text-sm font-medium text-red-800">
+                                    {% if lang == 'en' %}
+                                        Submission Failed
+                                    {% else %}
+                                        提交失败
+                                    {% endif %}
+                                </h3>
+                                <p class="mt-1 text-sm text-red-700">{{ error }}</p>
                                 </div>
                             </div>
                         </div>
@@ -211,7 +221,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    制作课程
+                                    {% if lang == 'en' %}
+                                        Course Creation
+                                    {% else %}
+                                        制作课程
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
@@ -220,7 +234,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    短视频带货
+                                    {% if lang == 'en' %}
+                                        Live Commerce
+                                    {% else %}
+                                        短视频带货
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
@@ -229,7 +247,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    做直播
+                                    {% if lang == 'en' %}
+                                        Live Streaming
+                                    {% else %}
+                                        做直播
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer">
@@ -238,7 +260,11 @@
                                     <svg class="w-4 h-4 mb-1 hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                                     </svg>
-                                    其它
+                                    {% if lang == 'en' %}
+                                        Other
+                                    {% else %}
+                                        其它
+                                    {% endif %}
                                 </div>
                             </label>
                         </div>
@@ -267,32 +293,48 @@
                             <label class="cursor-pointer block">
                                 <input type="radio" name="profession" value="创业者" class="sr-only peer" required>
                                 <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    创业者
+                                    {% if lang == 'en' %}
+                                        Entrepreneur
+                                    {% else %}
+                                        创业者
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer block">
                                 <input type="radio" name="profession" value="销售人员" class="sr-only peer" required>
                                 <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    销售人员
+                                    {% if lang == 'en' %}
+                                        Salesperson
+                                    {% else %}
+                                        销售人员
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer block">
                                 <input type="radio" name="profession" value="短视频创作者" class="sr-only peer" required>
                                 <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    短视频创作者
+                                    {% if lang == 'en' %}
+                                        Video Creator
+                                    {% else %}
+                                        短视频创作者
+                                    {% endif %}
                                 </div>
                             </label>
                             <label class="cursor-pointer block">
                                 <input type="radio" name="profession" value="其它岗位" class="sr-only peer" required>
                                 <div class="w-full p-4 rounded-xl border-2 transition-all font-medium text-left border-gray-200 text-gray-700 hover:border-gray-300 peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:text-primary">
-                                    其它岗位
+                                    {% if lang == 'en' %}
+                                        Other Position
+                                    {% else %}
+                                        其它岗位
+                                    {% endif %}
                                 </div>
                             </label>
                         </div>
                         <input
                             type="text"
                             name="custom_profession"
-                            placeholder="请输入您的职业"
+                            placeholder="{% if lang == 'en' %}Please enter your profession{% else %}请输入您的职业{% endif %}"
                             class="w-full p-4 border-2 border-gray-200 rounded-xl focus:border-primary focus:outline-none font-medium hidden"
                             id="customProfessionInput"
                         />
