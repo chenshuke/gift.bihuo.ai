@@ -55,12 +55,15 @@ class LanguageSupport:
             if data.get('status') == 'success':
                 country_code = data.get('countryCode', '').upper()
 
-                # 扩展英语国家列表，更多国家默认英文
-                chinese_countries = ['CN', 'TW', 'HK', 'MO', 'SG']
+                # 根据国家码判断语言 - 只有中国大陆、香港、澳门、台湾显示中文
+                chinese_countries = ['CN', 'HK', 'MO', 'TW']  # 移除新加坡
                 english_countries = [
                     'US', 'GB', 'CA', 'AU', 'NZ', 'IE', 'ZA', 'DE', 'FR', 'IT', 'ES',
                     'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'JP', 'KR', 'IN',
-                    'BR', 'MX', 'AR', 'RU', 'TR', 'AE', 'SA', 'EG', 'ZA', 'NG'
+                    'BR', 'MX', 'AR', 'RU', 'TR', 'AE', 'SA', 'EG', 'ZA', 'NG', 'SG',  # 新加坡放在英文列表
+                    'MY', 'TH', 'ID', 'VN', 'PH', 'VN', 'PH', 'VN', 'PH', 'VN', 'PH',
+                    'PL', 'CZ', 'HU', 'GR', 'PT', 'RO', 'BG', 'HR', 'SI', 'SK',
+                    'CL', 'CO', 'PE', 'UY', 'PY', 'BO', 'EC', 'VE'
                 ]
 
                 if country_code in chinese_countries:
