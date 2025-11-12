@@ -43,21 +43,25 @@ class LanguageSupport:
     def detect_language_from_ip(self, ip_address):
         """根据IP地址检测语言"""
         if not ip_address:
-            return 'zh'
+            return 'en'  # 改为默认英文
 
         try:
             import requests
 
             # 使用免费的IP地理位置API
-            response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=countryCode', timeout=2)
+            response = requests.get(f'http://ip-api.com/json/{ip_address}?fields=countryCode,status,message', timeout=3)
             data = response.json()
 
             if data.get('status') == 'success':
                 country_code = data.get('countryCode', '').upper()
 
-                # 根据国家码判断语言
+                # 扩展英语国家列表，更多国家默认英文
                 chinese_countries = ['CN', 'TW', 'HK', 'MO', 'SG']
-                english_countries = ['US', 'GB', 'CA', 'AU', 'NZ', 'IE', 'ZA']
+                english_countries = [
+                    'US', 'GB', 'CA', 'AU', 'NZ', 'IE', 'ZA', 'DE', 'FR', 'IT', 'ES',
+                    'NL', 'BE', 'AT', 'CH', 'SE', 'NO', 'DK', 'FI', 'JP', 'KR', 'IN',
+                    'BR', 'MX', 'AR', 'RU', 'TR', 'AE', 'SA', 'EG', 'ZA', 'NG'
+                ]
 
                 if country_code in chinese_countries:
                     return 'zh'
@@ -66,11 +70,12 @@ class LanguageSupport:
                 else:
                     # 其他国家默认英文
                     return 'en'
-        except:
-            pass
-
-        # 默认中文
-        return 'zh'
+            else:
+                # API失败时默认英文
+                return 'en'
+        except Exception as e:
+            # 异常时默认英文
+            return 'en'
 
 # 全局实例
 lang = LanguageSupport()

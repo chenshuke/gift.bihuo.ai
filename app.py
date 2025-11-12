@@ -47,11 +47,14 @@ def get_current_language():
     """获取当前语言"""
     # 优先使用session中的语言设置
     if 'language' in session:
+        print(f"使用Session中的语言: {session['language']}")
         return session['language']
 
     # 根据IP地址自动检测语言
     ip_address = get_client_ip()
+    print(f"检测到的IP地址: {ip_address}")
     detected_lang = lang.detect_language_from_ip(ip_address)
+    print(f"根据IP检测到的语言: {detected_lang}")
 
     # 将检测结果保存到session
     session['language'] = detected_lang
@@ -342,6 +345,23 @@ def get_translations(language):
         return jsonify(translations)
     else:
         return jsonify({'error': 'Translation file not found'}), 404
+
+@app.route('/api/test-ip-detection')
+def test_ip_detection():
+    """测试IP语言检测API"""
+    ip_address = get_client_ip()
+    detected_lang = lang.detect_language_from_ip(ip_address)
+
+    return jsonify({
+        'ip_address': ip_address,
+        'detected_language': detected_lang,
+        'user_agent': request.headers.get('User-Agent', ''),
+        'headers': {
+            'X-Forwarded-For': request.headers.get('X-Forwarded-For'),
+            'X-Real-IP': request.headers.get('X-Real-IP'),
+            'Remote-Addr': request.remote_addr
+        }
+    })
 
 def assign_code_to_user(fingerprint):
     """为用户分配兑换码（返回结果数据）"""
